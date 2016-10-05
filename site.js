@@ -115,7 +115,7 @@ Vue.component('curtain-options', {
   }; }),
   methods: {
     copyRight: function() {
-      this.panels[1].width = 200;
+      this.panels[1].width = 300;
       //this.panels[1] = JSON.parse(JSON.stringify(this.panels[0]));
     },
     copyLeft: function() {
