@@ -1,10 +1,3 @@
-<div id="app" class="container">
-  <curtain-options></curtain-options>
-</div>
-
-<script type="text/javascript">
-// <![CDATA[
-
 MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 
 var hideElement = function(selector) {
@@ -134,6 +127,3 @@ Vue.component('curtain-options', {
 new Vue({
   el: '#app'
 });
-
-// ]]>
-</script>
