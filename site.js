@@ -146,7 +146,7 @@ Vue.component('curtain-options', {
     },
     panelFolds: function() {
       var folds = [];
-      for (var i = 0; i < this.panelRects.length; i++) {
+      for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
         console.log(this.pocketSpacing);
         var halfSpacing = this.pocketSpacing/2;
