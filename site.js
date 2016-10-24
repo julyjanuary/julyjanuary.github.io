@@ -47,8 +47,8 @@ Vue.component('curtain-options', {
         </label>\
       </div>\
     </div>\
-    <div class="col-md-2">\
-      <div class="row">\
+    <div class="row">\
+      <div class="col-md-2">\
         <div class="col-md-2" v-for="panel in panels" v-if="$index < numPanels">\
           <h4>Panel {{$index+1}}</h4>\
           <button class="button" v-on:click="copyRight" v-if="$index == 0">copy right</button>\
@@ -98,6 +98,7 @@ Vue.component('curtain-options', {
       <div class="col-md-2">\
         drawing\
       </div>
+    </div>\
   ',
   data: (function(){ return {
     numPanels: 1,
