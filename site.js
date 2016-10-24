@@ -151,7 +151,7 @@ Vue.component('curtain-options', {
       return sumPrice;
     },
     panelPaths: function() {
-      var cmToPixles = 1/2;
+      var cmToPixles = 1;
       var windowLeft = 190;
       var windowRight = 288+86;
       var rodHeight = 10;
