@@ -96,7 +96,6 @@ Vue.component('curtain-options', {
         </div>\
       </div>\
       <div class="col-md-2">\
-        drawing\
       </div>\
     </div>\
   ',
