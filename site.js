@@ -49,6 +49,7 @@ Vue.component('curtain-options', {
     </div>\
     <div class="row">\
       <div class="col-md-2">\
+        <h4>Current price: {{price}}</h4>\
         <div class="col-md-2" v-for="panel in panels" v-if="$index < numPanels">\
           <h4>Panel {{$index+1}}</h4>\
           <button class="button" v-on:click="copyRight" v-if="$index == 0">copy right</button>\
@@ -139,6 +140,15 @@ Vue.component('curtain-options', {
     },
     copyLeft: function() {
       this.panels[0] = JSON.parse(JSON.stringify(this.panels[1]));
+    }
+  },
+  computed: {
+    price: function () {
+      var sumPrice = 0;
+      for (var i = 0; i < this.numPanels; i++) {
+        sumPrice += this.panels[i].width/100*this.panels[i].height/100*300;
+      }
+      return sumPrice;
     }
   }
 });
