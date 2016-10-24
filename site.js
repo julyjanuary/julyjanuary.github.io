@@ -48,8 +48,8 @@ Vue.component('curtain-options', {
       </div>\
     </div>\
     <div class="row">\
-      <div class="col-md-2">\
-        <h4>Current price: {{price}}</h4>\
+      <div class="col-lg-2">\
+        <h4>Current price: {{price}} SEK</h4>\
         <div class="col-md-2" v-for="panel in panels" v-if="$index < numPanels">\
           <h4>Panel {{$index+1}}</h4>\
           <button class="button" v-on:click="copyRight" v-if="$index == 0">copy right</button>\
@@ -96,7 +96,7 @@ Vue.component('curtain-options', {
           </div>\
         </div>\
       </div>\
-      <div class="col-md-2">\
+      <div class="col-lg-2">\
        <svg width="580" height="400" xmlns="http://www.w3.org/2000/svg">\
          <g>\
           <title>background</title>\
