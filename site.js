@@ -30,6 +30,11 @@ hideElement('form[name="articleChoices"]');
 // Article quantity
 hideElement('input[name="quantity"]');
 
+var cmToPixles = 1;
+var windowLeft = 190;
+var windowRight = 288+86;
+var rodHeight = 80;
+
 Vue.component('curtain-options', {
   template: '\
     <div class="row">\
@@ -110,6 +115,7 @@ Vue.component('curtain-options', {
           <rect stroke="#000" id="svg_1" height="145.99999" width="84" y="121.5" x="189.5" stroke-width="1.5" fill="#fff"/>\
           <rect id="svg_2" height="147" width="86" y="121.5" x="288.5" stroke-width="1.5" stroke="#000" fill="#fff"/>\
           <path v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <path v-for="fold in panelFolds" d="M{{fold.x}},{{fold.y}} c0,0,0,0,{{fold.height}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
          </g>\
         </svg>\
       </div>\
@@ -128,18 +134,28 @@ Vue.component('curtain-options', {
   methods: {
   },
   computed: {
+    pocketSpacing: function() {
+      return 20 / this.fullness;
+    },
     price: function () {
       var widthMeters = (this.panel.width*this.panel.fullness)/100;
       var heightMeters = this.panel.height/100;
       var meterPrice = 300;
       return Math.round(widthMeters * heightMeters * meterPrice);
     },
-    panelPaths: function() {
-      var cmToPixles = 1;
-      var windowLeft = 190;
-      var windowRight = 288+86;
-      var rodHeight = 80;
-      var panelRects = [
+    panelFolds: function() {
+      var folds = [];
+      for (var i = 0; i < this.panelRects.length) {
+        var rect = this.panelRects[i];
+        for (var x = rect[0]; x < rect[0]+rect[2]; x++) {
+          folds.push({ x: x, y: this.rodHeight, height: rect[3] });
+        }
+      }
+
+      return folds;
+    },
+    panelRects: function() {
+      return [
         [
           windowLeft-this.panel.width*cmToPixles,
           rodHeight,
@@ -152,17 +168,17 @@ Vue.component('curtain-options', {
           this.panel.width*cmToPixles,
           this.panel.height*cmToPixles
         ]
-
       ]
-
+    },
+    panelPaths: function() {
       strings = []
       for (var i = 0; i < this.numPanels; i++) {
-        var panelRect = panelRects[i];
-        var str = "M"+panelRect[0].toString()+","+panelRect[1].toString()+" c0,0,0,0,"+
-                  (panelRect[2]).toString()+","+(0).toString()+" c0,0,0,0," +
-                  (0).toString()+","+(panelRect[3]).toString()+" c0,0,0,0,"+
-                  (-panelRect[2]).toString()+","+(0).toString()+" c0,0,0,0,"+
-                  (0).toString()+","+(-panelRect[3]).toString();
+        var rect = this.panelRects[i];
+        var str = "M"+rect[0].toString()+","+rect[1].toString()+" c0,0,0,0,"+
+                  (rect[2]).toString()+","+(0).toString()+" c0,0,0,0," +
+                  (0).toString()+","+(rect[3]).toString()+" c0,0,0,0,"+
+                  (-rect[2]).toString()+","+(0).toString()+" c0,0,0,0,"+
+                  (0).toString()+","+(-rect[3]).toString();
 
         //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
         strings.push(str);
