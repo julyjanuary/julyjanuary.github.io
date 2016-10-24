@@ -47,53 +47,57 @@ Vue.component('curtain-options', {
         </label>\
       </div>\
     </div>\
-    <div class="row">\
-      <div class="col-md-2" v-for="panel in panels" v-if="$index < numPanels">\
-        <h4>Panel {{$index+1}}</h4>\
-        <button class="button" v-on:click="copyRight" v-if="$index == 0">copy right</button>\
-        <button class="button" v-on:click="copyLeft" v-if="$index == 1">copy left</button>\
-        <div class="form-group">\
-          <div class="input-group">\
-            <input v-model="panel.width" type="number" min="1" step="1" class="form-control" placeholder="Width">\
-            <div class="input-group-addon">cm</div>\
+    <div class="col-md-2">\
+      <div class="row">\
+        <div class="col-md-2" v-for="panel in panels" v-if="$index < numPanels">\
+          <h4>Panel {{$index+1}}</h4>\
+          <button class="button" v-on:click="copyRight" v-if="$index == 0">copy right</button>\
+          <button class="button" v-on:click="copyLeft" v-if="$index == 1">copy left</button>\
+          <div class="form-group">\
+            <div class="input-group">\
+              <input v-model="panel.width" type="number" min="1" step="1" class="form-control" placeholder="Width">\
+              <div class="input-group-addon">cm</div>\
+            </div>\
+            <div class="input-group">\
+              <input v-model="panel.height" type="number" min="1" step="1" class="form-control" placeholder="Height">\
+              <div class="input-group-addon">cm</div>\
+            </div>\
           </div>\
-          <div class="input-group">\
-            <input v-model="panel.height" type="number" min="1" step="1" class="form-control" placeholder="Height">\
-            <div class="input-group-addon">cm</div>\
+          <div class="radio">\
+            <label>\
+              <input type="radio" name="mountingRadios{{$index}}" value="wall" v-model="panel.mount">\
+              Wall mounted\
+            </label>\
           </div>\
-        </div>\
-        <div class="radio">\
-          <label>\
-            <input type="radio" name="mountingRadios{{$index}}" value="wall" v-model="panel.mount">\
-            Wall mounted\
-          </label>\
-        </div>\
-        <div class="radio">\
-          <label>\
-            <input type="radio" name="mountingRadios{{$index}}" value="ceil" v-model="panel.mount">\
-            Ceiling mounted\
-          </label>\
-        </div>\
-        <div class="radio">\
-          <label>\
-            <input type="radio" name="hangingRadios{{$index}}" value="rodpocket" v-model="panel.hanging">\
-            Rod pocket\
-          </label>\
-        </div>\
-        <div class="radio">\
-          <label>\
-            <input type="radio" name="hangingRadios{{$index}}" value="plait2fold" v-model="panel.hanging">\
-            French plait 2-fold\
-          </label>\
-        </div>\
-        <div class="radio">\
-          <label>\
-            <input type="radio" name="hangingRadios{{$index}}" value="plait3fold" v-model="panel.hanging">\
-            French plait 3-fold\
-          </label>\
+          <div class="radio">\
+            <label>\
+              <input type="radio" name="mountingRadios{{$index}}" value="ceil" v-model="panel.mount">\
+              Ceiling mounted\
+            </label>\
+          </div>\
+          <div class="radio">\
+            <label>\
+              <input type="radio" name="hangingRadios{{$index}}" value="rodpocket" v-model="panel.hanging">\
+              Rod pocket\
+            </label>\
+          </div>\
+          <div class="radio">\
+            <label>\
+              <input type="radio" name="hangingRadios{{$index}}" value="plait2fold" v-model="panel.hanging">\
+              French plait 2-fold\
+            </label>\
+          </div>\
+          <div class="radio">\
+            <label>\
+              <input type="radio" name="hangingRadios{{$index}}" value="plait3fold" v-model="panel.hanging">\
+              French plait 3-fold\
+            </label>\
+          </div>\
         </div>\
       </div>\
-    </div>\
+      <div class="col-md-2">\
+        drawing\
+      </div>
   ',
   data: (function(){ return {
     numPanels: 1,
