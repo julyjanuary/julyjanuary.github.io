@@ -109,7 +109,7 @@ Vue.component('curtain-options', {
           <title>Layer 1</title>\
           <rect stroke="#000" id="svg_1" height="145.99999" width="84" y="121.5" x="189.5" stroke-width="1.5" fill="#fff"/>\
           <rect id="svg_2" height="147" width="86" y="121.5" x="288.5" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path id="svg_3" d="m87.5,114.5c12,6 7,9 19,6c12,-3 11,-9 20,-7c9,2 9,7 19,3c10,-4 10,-8 20,-6c10,2 14,12 13.5,11.5c0.5,0.5 1.5,214.5 1,214c0.5,0.5 -23.5,8.5 -18.5,-0.5c5,-9 -33,-14 -23,-5c10,9 -33,18 -29,7c4,-11 -23,-19 -22,-11c1,8 -15,0 -15.5,-0.5c0.5,0.5 -0.5,-212.5 -1,-213c0.5,0.5 4.5,-4.5 16.5,1.5z" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <path v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
          </g>\
         </svg>\
       </div>\
@@ -149,6 +149,14 @@ Vue.component('curtain-options', {
         sumPrice += this.panels[i].width/100*this.panels[i].height/100*300;
       }
       return sumPrice;
+    },
+    panelPaths: function() {
+      strings = []
+      for (var i = 0; i < this.numPanels; i++) {
+        var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
+        strings.push(str);
+      }
+      return strings;
     }
   }
 });
