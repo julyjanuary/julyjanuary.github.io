@@ -175,9 +175,10 @@ Vue.component('curtain-options', {
       for (var i = 0; i < this.numPanels; i++) {
         var panelRect = panelRects[i];
         var str = "M"+panelRect[0].toString()+","+panelRect[1].toString()+" c0,0,0,0,"+
-                  (panelRect[0]+panelRect[2]).toString()+","+panelRect[1].toString()+" c0,0,0,0," +
-                  (panelRect[0]+panelRect[2]).toString()+","+(panelRect[1]+panelRect[3]).toString()+" c0,0,0,0,"+
-                  panelRect[0].toString()+","+(panelRect[1]+panelRect[3]).toString();
+                  (panelRect[2]).toString()+","+(0).toString()+" c0,0,0,0," +
+                  (0).toString()+","+(panelRect[3]).toString()+" c0,0,0,0,"+
+                  (-panelRect[2]).toString()+","+(0).toString()+" c0,0,0,0,"+
+                  (0).toString()+","+(-panelRect[3]).toString();
 
         //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
         strings.push(str);
