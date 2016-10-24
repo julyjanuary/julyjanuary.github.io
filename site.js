@@ -50,10 +50,7 @@ Vue.component('curtain-options', {
     <div class="row">\
       <div class="col-md-4">\
         <h4>Current price: {{price}} SEK</h4>\
-        <div class="col-md-6" v-for="panel in panels" v-if="$index < numPanels">\
-          <h4>Panel {{$index+1}}</h4>\
-          <button class="button" v-on:click="copyRight" v-if="$index == 0">copy right</button>\
-          <button class="button" v-on:click="copyLeft" v-if="$index == 1">copy left</button>\
+        <div class="row">\
           <div class="form-group">\
             <div class="input-group">\
               <input v-model="panel.width" type="number" min="1" step="1" class="form-control" placeholder="Width">\
@@ -66,31 +63,31 @@ Vue.component('curtain-options', {
           </div>\
           <div class="radio">\
             <label>\
-              <input type="radio" name="mountingRadios{{$index}}" value="wall" v-model="panel.mount">\
+              <input type="radio" name="mountingRadios" value="wall" v-model="panel.mount">\
               Wall mounted\
             </label>\
           </div>\
           <div class="radio">\
             <label>\
-              <input type="radio" name="mountingRadios{{$index}}" value="ceil" v-model="panel.mount">\
+              <input type="radio" name="mountingRadios" value="ceil" v-model="panel.mount">\
               Ceiling mounted\
             </label>\
           </div>\
           <div class="radio">\
             <label>\
-              <input type="radio" name="hangingRadios{{$index}}" value="rodpocket" v-model="panel.hanging">\
+              <input type="radio" name="hangingRadios" value="rodpocket" v-model="panel.hanging">\
               Rod pocket\
             </label>\
           </div>\
           <div class="radio">\
             <label>\
-              <input type="radio" name="hangingRadios{{$index}}" value="plait2fold" v-model="panel.hanging">\
+              <input type="radio" name="hangingRadios" value="plait2fold" v-model="panel.hanging">\
               French plait 2-fold\
             </label>\
           </div>\
           <div class="radio">\
             <label>\
-              <input type="radio" name="hangingRadios{{$index}}" value="plait3fold" v-model="panel.hanging">\
+              <input type="radio" name="hangingRadios" value="plait3fold" v-model="panel.hanging">\
               French plait 3-fold\
             </label>\
           </div>\
@@ -117,38 +114,19 @@ Vue.component('curtain-options', {
   ',
   data: (function(){ return {
     numPanels: 1,
-    panels: [
-    {
+    panel: {
       width: 100,
       height: 240,
       mount: 'wall',
       hanging: 'rodpocket',
       fullness: 1.5
-    },
-    {
-      width: 100,
-      height: 240,
-      mount: 'ceil',
-      hanging: 'plait2fold',
-      fullness: 1.5
-    }]
+    }
   }; }),
   methods: {
-    copyRight: function() {
-      this.panels[1].width = 300;
-      //this.panels[1] = JSON.parse(JSON.stringify(this.panels[0]));
-    },
-    copyLeft: function() {
-      this.panels[0] = JSON.parse(JSON.stringify(this.panels[1]));
-    }
   },
   computed: {
     price: function () {
-      var sumPrice = 0;
-      for (var i = 0; i < this.numPanels; i++) {
-        sumPrice += this.panels[i].width/100*this.panels[i].height/100*300;
-      }
-      return sumPrice;
+      return this.panel.width/100*this.panel.height/100*300;
     },
     panelPaths: function() {
       var cmToPixles = 1;
@@ -157,16 +135,16 @@ Vue.component('curtain-options', {
       var rodHeight = 80;
       var panelRects = [
         [
-          windowLeft-this.panels[0].width*cmToPixles,
+          windowLeft-this.panel.width*cmToPixles,
           rodHeight,
-          this.panels[0].width*cmToPixles,
-          this.panels[0].height*cmToPixles
+          this.panel.width*cmToPixles,
+          this.panel.height*cmToPixles
         ],
         [
           windowRight,
           rodHeight,
-          this.panels[1].width*cmToPixles,
-          this.panels[1].height*cmToPixles
+          this.panel.width*cmToPixles,
+          this.panel.height*cmToPixles
         ]
 
       ]
