@@ -153,7 +153,7 @@ Vue.component('curtain-options', {
     panelPaths: function() {
       strings = []
       for (var i = 0; i < this.numPanels; i++) {
-        var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
+        var str = "M"+((i+1)*100).toString()+",100 c20,20-20,-20,100,0";
         strings.push(str);
       }
       return strings;
