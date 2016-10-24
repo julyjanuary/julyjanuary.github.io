@@ -61,6 +61,9 @@ Vue.component('curtain-options', {
               <div class="input-group-addon">cm</div>\
             </div>\
           </div>\
+          <div class="input-group">\
+            <input v-model="panel.fullness" type="number" min="1" max="2" step="0.5" class="form-control" placeholder="Fullness">\
+          </div>\
           <div class="radio">\
             <label>\
               <input type="radio" name="mountingRadios" value="wall" v-model="panel.mount">\
@@ -113,7 +116,7 @@ Vue.component('curtain-options', {
     </div>\
   ',
   data: (function(){ return {
-    numPanels: 1,
+    numPanels: 2,
     panel: {
       width: 100,
       height: 240,
@@ -126,7 +129,10 @@ Vue.component('curtain-options', {
   },
   computed: {
     price: function () {
-      return this.panel.width/100*this.panel.height/100*300;
+      var widthMeters = (this.panel.width*this.panel.fullness)/100;
+      var heightMeters = this.panel.height/100;
+      var meterPrice = 300;
+      return Math.round(widthMeters * heightMeters * meterPrice);
     },
     panelPaths: function() {
       var cmToPixles = 1;
