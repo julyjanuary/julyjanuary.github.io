@@ -151,9 +151,35 @@ Vue.component('curtain-options', {
       return sumPrice;
     },
     panelPaths: function() {
+      var cmToPixles = 1/2;
+      var windowLeft = 190;
+      var windowRight = 288+86;
+      var rodHeight = 10;
+      var panelRects = [
+        [
+          windowLeft-this.panels[0].width*cmToPixles,
+          rodHeight,
+          this.panels[0].width*cmToPixles,
+          this.panels[0].height*cmToPixles
+        ],
+        [
+          windowRight,
+          rodHeight,
+          this.panels[1].width*cmToPixles,
+          this.panels[1].height*cmToPixles
+        ]
+
+      ]
+
       strings = []
       for (var i = 0; i < this.numPanels; i++) {
-        var str = "M"+((i+1)*100).toString()+",100 c50,50,50,-50,100,0";
+        var panelRect = panelRects[i];
+        var str = "M"+panelRect[0].toString()+","+panelRect[1].toString()+" c0,0,0,0,"+
+                  (panelRect[0]+panelRect[2]).toString()+","+panelRect[1].toString()+" c0,0,0,0," +
+                  (panelRect[0]+panelRect[2]).toString()+","+(panelRect[1]+panelRect[3]).toString()+" c0,0,0,0,"+
+                  panelRect[0].toString()+","+(panelRect[1]+panelRect[3]).toString();
+
+        //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
         strings.push(str);
       }
       return strings;
