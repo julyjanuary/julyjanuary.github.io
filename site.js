@@ -154,7 +154,7 @@ Vue.component('curtain-options', {
       var cmToPixles = 1;
       var windowLeft = 190;
       var windowRight = 288+86;
-      var rodHeight = 10;
+      var rodHeight = 80;
       var panelRects = [
         [
           windowLeft-this.panels[0].width*cmToPixles,
