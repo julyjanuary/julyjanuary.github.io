@@ -115,7 +115,7 @@ Vue.component('curtain-options', {
           <rect stroke="#000" id="svg_1" height="145.99999" width="84" y="121.5" x="189.5" stroke-width="1.5" fill="#fff"/>\
           <rect id="svg_2" height="147" width="86" y="121.5" x="288.5" stroke-width="1.5" stroke="#000" fill="#fff"/>\
           <path v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path v-for="fold in panelFolds" d="M{{fold.x}},{{fold.y}} c0,0,0,0,{{fold.height}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <path v-for="fold in panelFolds" d="{{fold}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
          </g>\
         </svg>\
       </div>\
@@ -135,7 +135,8 @@ Vue.component('curtain-options', {
   },
   computed: {
     pocketSpacing: function() {
-      return 20 / this.fullness;
+      var preferred = 40 / this.panel.fullness;
+      return this.panel.width / Math.round(this.panel.width / preferred);
     },
     price: function () {
       var widthMeters = (this.panel.width*this.panel.fullness)/100;
@@ -145,10 +146,16 @@ Vue.component('curtain-options', {
     },
     panelFolds: function() {
       var folds = [];
-      for (var i = 0; i < this.panelRects.length) {
+      for (var i = 0; i < this.panelRects.length; i++) {
         var rect = this.panelRects[i];
-        for (var x = rect[0]; x < rect[0]+rect[2]; x++) {
-          folds.push({ x: x, y: this.rodHeight, height: rect[3] });
+        console.log(this.pocketSpacing);
+        var halfSpacing = this.pocketSpacing/2;
+        for (var x = rect[0]+halfSpacing; x < rect[0]+rect[2]; x += halfSpacing) {
+          console.log(x);
+          var fold ={ x: x, y: rodHeight, height: rect[3] };
+          var str = "M"+fold.x.toString()+","+fold.y.toString()+" c0,0,0,0,0,"+fold.height.toString();
+          console.log(str);
+          folds.push(str);
         }
       }
 
@@ -179,6 +186,24 @@ Vue.component('curtain-options', {
                   (0).toString()+","+(rect[3]).toString()+" c0,0,0,0,"+
                   (-rect[2]).toString()+","+(0).toString()+" c0,0,0,0,"+
                   (0).toString()+","+(-rect[3]).toString();
+
+        var numFolds = Math.floor(this.panel.width / this.pocketSpacing);
+        var str = "M"+rect[0].toString()+","+rect[1].toString();
+        for (var x = 0; x < numFolds; x++) {
+          var f = (this.pocketSpacing / 2).toString();
+          str += "c"+f+","+f+","+f+",-"+f+","+(this.pocketSpacing).toString()+",0 ";
+          console.log(str);
+        }
+          
+        str += "c0,0,0,0," + (0).toString()+","+(rect[3]).toString()+" ";
+
+        for (var x = 0; x < numFolds; x++) {
+          var f = (this.pocketSpacing / 2).toString();
+          str += "c-"+f+","+f+",-"+f+",-"+f+",-"+(this.pocketSpacing).toString()+",0 ";
+          console.log(str);
+        }
+
+        str += "c0,0,0,0," + (0).toString()+","+(-rect[3]).toString();
 
         //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
         strings.push(str);
