@@ -103,6 +103,15 @@ Vue.component('curtain-options', {
       </div>\
       <div class="col-lg-4">\
        <svg width="580" height="400" xmlns="http://www.w3.org/2000/svg">\
+        <defs>\
+        <filter id="bfilter" filterUnits="userSpaceOnUse" x="0" y="0" width="200" height="120">\
+          <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>\
+        </filter>\
+          <filter filterUnits="userSpaceOnUse" id="filter" height="402" width="582" >\
+            <feTurbulence baseFrequency="0.2" numOctaves="3" type="fractalNoise" />\
+            <feDisplacementMap scale="2" xChannelSelector="R" in="SourceGraphic" />\
+          </filter>\
+        </defs>\
          <g>\
           <title>background</title>\
           <rect fill="#fff" id="canvas_background" height="402" width="582" y="-1" x="-1"/>\
@@ -112,10 +121,10 @@ Vue.component('curtain-options', {
          </g>\
          <g>\
           <title>Layer 1</title>\
-          <rect stroke="#000" id="svg_1" height="145.99999" width="84" y="121.5" x="189.5" stroke-width="1.5" fill="#fff"/>\
-          <rect id="svg_2" height="147" width="86" y="121.5" x="288.5" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path v-for="fold in panelFolds" d="{{fold}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <rect style="filter:url(#filter)" stroke="#000" id="svg_1" height="145.99999" width="84" y="121.5" x="189.5" stroke-width="1.5" fill="#fff"/>\
+          <rect style="filter:url(#filter)" id="svg_2" height="147" width="86" y="121.5" x="288.5" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <path style="filter:url(#filter)" v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <path style="filter:url(#filter)" v-for="fold in panelFolds" d="{{fold}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
          </g>\
         </svg>\
       </div>\
@@ -216,3 +225,4 @@ Vue.component('curtain-options', {
 new Vue({
   el: '#app'
 });
+
