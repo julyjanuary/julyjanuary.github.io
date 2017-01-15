@@ -1,6 +1,10 @@
+'use strict';
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 
-var hideElement = function (selector) {
+var hideElement = function hideElement(selector) {
   var doneHiding = false;
   var observer = new MutationObserver(function (mutations, observer) {
     if (doneHiding) return;
@@ -129,7 +133,7 @@ Vue.component('curtain-options', {
       </div>\
     </div>\
   ',
-  data: function () {
+  data: function data() {
     return {
       numPanels: 2,
       panel: {
@@ -143,17 +147,17 @@ Vue.component('curtain-options', {
   },
   methods: {},
   computed: {
-    pocketSpacing: function () {
+    pocketSpacing: function pocketSpacing() {
       var preferred = 40 / this.panel.fullness;
       return this.panel.width / Math.round(this.panel.width / preferred);
     },
-    price: function () {
+    price: function price() {
       var widthMeters = this.panel.width * this.panel.fullness / 100;
       var heightMeters = this.panel.height / 100;
       var meterPrice = 300;
       return Math.round(widthMeters * heightMeters * meterPrice);
     },
-    panelFolds: function () {
+    panelFolds: function panelFolds() {
       var folds = [];
       for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
@@ -162,40 +166,39 @@ Vue.component('curtain-options', {
         for (var x = rect[0] + halfSpacing; x < rect[0] + rect[2]; x += halfSpacing) {
           console.log(x);
           var fold = { x: x, y: rodHeight, height: rect[3] };
-          var str = "M" + fold.x.toString() + "," + fold.y.toString() + " c0,0,0,0,0," + fold.height.toString();
-          console.log(str);
+          var str = 'M' + fold.x + ',' + fold.y + ' c0,0,0,0,0,' + fold.height;
           folds.push(str);
         }
       }
 
       return folds;
     },
-    panelRects: function () {
+    panelRects: function panelRects() {
       return [[windowLeft - this.panel.width * cmToPixles, rodHeight, this.panel.width * cmToPixles, this.panel.height * cmToPixles], [windowRight, rodHeight, this.panel.width * cmToPixles, this.panel.height * cmToPixles]];
     },
-    panelPaths: function () {
+    panelPaths: function panelPaths() {
       strings = [];
       for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
-        var str = "M" + rect[0].toString() + "," + rect[1].toString() + " c0,0,0,0," + rect[2].toString() + "," + 0 .toString() + " c0,0,0,0," + 0 .toString() + "," + rect[3].toString() + " c0,0,0,0," + (-rect[2]).toString() + "," + 0 .toString() + " c0,0,0,0," + 0 .toString() + "," + (-rect[3]).toString();
+        var str = 'M' + rect[0] + ',' + rect[1] + ' \n                   c0,0,0,0,' + rect[2] + ',0\n                   c0,0,0,0,0,' + rect[3] + '\n                   c0,0,0,0,' + -rect[2] + ',0\n                   c0,0,0,0,0' + rect[3];
 
         var numFolds = Math.floor(this.panel.width / this.pocketSpacing);
-        var str = "M" + rect[0].toString() + "," + rect[1].toString();
+        var str = 'M' + rect[0] + ',' + rect[1];
         for (var x = 0; x < numFolds; x++) {
           var f = (this.pocketSpacing / 2).toString();
-          str += "c" + f + "," + f + "," + f + ",-" + f + "," + this.pocketSpacing.toString() + ",0 ";
+          str += 'c' + f + ',' + f + ',' + f + ',' + -f + ',' + this.pocketSpacing + ',0';
           console.log(str);
         }
 
-        str += "c0,0,0,0," + 0 .toString() + "," + rect[3].toString() + " ";
+        str += 'c0,0,0,0,0,' + rect[3] + ' ';
 
         for (var x = 0; x < numFolds; x++) {
           var f = (this.pocketSpacing / 2).toString();
-          str += "c-" + f + "," + f + ",-" + f + ",-" + f + ",-" + this.pocketSpacing.toString() + ",0 ";
+          str += 'c' + -f + ',' + f + ',' + -f + ',' + -f + ',' + -this.pocketSpacing + ',0 ';
           console.log(str);
         }
 
-        str += "c0,0,0,0," + 0 .toString() + "," + (-rect[3]).toString();
+        str += 'c0,0,0,0,0,' + -rect[3];
 
         //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
         strings.push(str);
@@ -208,4 +211,11 @@ Vue.component('curtain-options', {
 new Vue({
   el: '#app'
 });
+
+var name = 'David';
+console.log('Hi, my name is ' + name); // Hi, my name is David
+
+var Test = function Test() {
+  _classCallCheck(this, Test);
+};
 
