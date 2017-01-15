@@ -30,7 +30,7 @@ hideElement('form[name="articleChoices"]');
 // Article quantity
 hideElement('input[name="quantity"]');
 
-var cmToPixles = 1;
+var cmToPixels = 1;
 var windowLeft = 190;
 var windowRight = 288+86;
 var rodHeight = 80;
@@ -162,8 +162,7 @@ Vue.component('curtain-options', {
         for (var x = rect[0]+halfSpacing; x < rect[0]+rect[2]; x += halfSpacing) {
           console.log(x);
           var fold ={ x: x, y: rodHeight, height: rect[3] };
-          var str = "M"+fold.x.toString()+","+fold.y.toString()+" c0,0,0,0,0,"+fold.height.toString();
-          console.log(str);
+          var str = `M${fold.x},${fold.y} c0,0,0,0,0,${fold.height}`;
           folds.push(str);
         }
       }
@@ -173,16 +172,16 @@ Vue.component('curtain-options', {
     panelRects: function() {
       return [
         [
-          windowLeft-this.panel.width*cmToPixles,
+          windowLeft-this.panel.width*cmToPixels,
           rodHeight,
-          this.panel.width*cmToPixles,
-          this.panel.height*cmToPixles
+          this.panel.width*cmToPixels,
+          this.panel.height*cmToPixels
         ],
         [
           windowRight,
           rodHeight,
-          this.panel.width*cmToPixles,
-          this.panel.height*cmToPixles
+          this.panel.width*cmToPixels,
+          this.panel.height*cmToPixels
         ]
       ]
     },
@@ -190,31 +189,28 @@ Vue.component('curtain-options', {
       strings = []
       for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
-        var str = "M"+rect[0].toString()+","+rect[1].toString()+" c0,0,0,0,"+
-                  (rect[2]).toString()+","+(0).toString()+" c0,0,0,0," +
-                  (0).toString()+","+(rect[3]).toString()+" c0,0,0,0,"+
-                  (-rect[2]).toString()+","+(0).toString()+" c0,0,0,0,"+
-                  (0).toString()+","+(-rect[3]).toString();
+        var str = `M${rect[0]},${rect[1]} 
+                   c0,0,0,0,${rect[2]},0
+                   c0,0,0,0,0,${rect[3]}
+                   c0,0,0,0,${-rect[2]},0
+                   c0,0,0,0,0${rect[3]}`;
 
         var numFolds = Math.floor(this.panel.width / this.pocketSpacing);
-        var str = "M"+rect[0].toString()+","+rect[1].toString();
+        var str = `M${rect[0]},${rect[1]}`;
         for (var x = 0; x < numFolds; x++) {
           var f = (this.pocketSpacing / 2).toString();
-          str += "c"+f+","+f+","+f+",-"+f+","+(this.pocketSpacing).toString()+",0 ";
-          console.log(str);
+          str += `c${f},${f},${f},${-f},${this.pocketSpacing},0`;
         }
           
-        str += "c0,0,0,0," + (0).toString()+","+(rect[3]).toString()+" ";
+        str += `c0,0,0,0,0,${rect[3]} `;
 
         for (var x = 0; x < numFolds; x++) {
           var f = (this.pocketSpacing / 2).toString();
-          str += "c-"+f+","+f+",-"+f+",-"+f+",-"+(this.pocketSpacing).toString()+",0 ";
-          console.log(str);
+          str += `c${-f},${f},${-f},${-f},${-this.pocketSpacing},0 `;
         }
 
-        str += "c0,0,0,0," + (0).toString()+","+(-rect[3]).toString();
+        str += `c0,0,0,0,0,${-rect[3]}`;
 
-        //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
         strings.push(str);
       }
       return strings;
@@ -225,4 +221,3 @@ Vue.component('curtain-options', {
 new Vue({
   el: '#app'
 });
-
