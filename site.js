@@ -1,7 +1,5 @@
 'use strict';
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 
 var hideElement = function hideElement(selector) {
@@ -33,7 +31,7 @@ hideElement('form[name="articleChoices"]');
 // Article quantity
 hideElement('input[name="quantity"]');
 
-var cmToPixles = 1;
+var cmToPixels = 1;
 var windowLeft = 190;
 var windowRight = 288 + 86;
 var rodHeight = 80;
@@ -124,10 +122,9 @@ Vue.component('curtain-options', {
          </g>\
          <g>\
           <title>Layer 1</title>\
-          <rect style="filter:url(#filter)" stroke="#000" id="svg_1" height="145.99999" width="84" y="121.5" x="189.5" stroke-width="1.5" fill="#fff"/>\
-          <rect style="filter:url(#filter)" id="svg_2" height="147" width="86" y="121.5" x="288.5" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <rect style="filter:url(#filter)" v-for="rect in windowRects" x="{{rect.x}}" y="{{rect.y}}" width="{{rect.width}}" height="{{rect.height}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
           <path style="filter:url(#filter)" v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path style="filter:url(#filter)" v-for="fold in panelFolds" d="{{fold}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <path style="filter:url(#filter)" v-for="fold in foldPaths" d="{{fold}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
          </g>\
         </svg>\
       </div>\
@@ -157,15 +154,13 @@ Vue.component('curtain-options', {
       var meterPrice = 300;
       return Math.round(widthMeters * heightMeters * meterPrice);
     },
-    panelFolds: function panelFolds() {
+    foldPaths: function foldPaths() {
       var folds = [];
       for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
-        console.log(this.pocketSpacing);
         var halfSpacing = this.pocketSpacing / 2;
-        for (var x = rect[0] + halfSpacing; x < rect[0] + rect[2]; x += halfSpacing) {
-          console.log(x);
-          var fold = { x: x, y: rodHeight, height: rect[3] };
+        for (var x = rect.x + halfSpacing; x < rect.x + rect.width; x += halfSpacing) {
+          var fold = { x: x, y: rodHeight, height: rect.height };
           var str = 'M' + fold.x + ',' + fold.y + ' c0,0,0,0,0,' + fold.height;
           folds.push(str);
         }
@@ -174,36 +169,46 @@ Vue.component('curtain-options', {
       return folds;
     },
     panelRects: function panelRects() {
-      return [[windowLeft - this.panel.width * cmToPixles, rodHeight, this.panel.width * cmToPixles, this.panel.height * cmToPixles], [windowRight, rodHeight, this.panel.width * cmToPixles, this.panel.height * cmToPixles]];
+      return [{
+        x: windowLeft - this.panel.width * cmToPixels,
+        y: rodHeight,
+        width: this.panel.width * cmToPixels,
+        height: this.panel.height * cmToPixels
+      }, {
+        x: windowRight,
+        y: rodHeight,
+        width: this.panel.width * cmToPixels,
+        height: this.panel.height * cmToPixels
+      }];
+    },
+    windowRects: function windowRects() {
+      return [{ x: 189, y: 121, width: 84, height: 146 }, { x: 288, y: 121, width: 84, height: 146 }];
     },
     panelPaths: function panelPaths() {
-      strings = [];
+      var stringsList = [];
       for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
-        var str = 'M' + rect[0] + ',' + rect[1] + ' \n                   c0,0,0,0,' + rect[2] + ',0\n                   c0,0,0,0,0,' + rect[3] + '\n                   c0,0,0,0,' + -rect[2] + ',0\n                   c0,0,0,0,0' + rect[3];
+        var str = 'M' + rect.x + ',' + rect.y + ' c0,0,0,0,' + rect.width + ',0 c0,0,0,0,0,' + rect.height + ' c0,0,0,0,' + -rect.width + ',0 c0,0,0,0,0' + rect.height;
 
         var numFolds = Math.floor(this.panel.width / this.pocketSpacing);
-        var str = 'M' + rect[0] + ',' + rect[1];
+        var str = 'M' + rect.x + ',' + rect.y;
         for (var x = 0; x < numFolds; x++) {
           var f = (this.pocketSpacing / 2).toString();
           str += 'c' + f + ',' + f + ',' + f + ',' + -f + ',' + this.pocketSpacing + ',0';
-          console.log(str);
         }
 
-        str += 'c0,0,0,0,0,' + rect[3] + ' ';
+        str += 'c0,0,0,0,0,' + rect.height + ' ';
 
         for (var x = 0; x < numFolds; x++) {
           var f = (this.pocketSpacing / 2).toString();
           str += 'c' + -f + ',' + f + ',' + -f + ',' + -f + ',' + -this.pocketSpacing + ',0 ';
-          console.log(str);
         }
 
-        str += 'c0,0,0,0,0,' + -rect[3];
+        str += 'c0,0,0,0,0,' + -rect.height;
 
-        //var str = "M"+((i+1)*100)+",100 c20,20-20,-20,100,0";
-        strings.push(str);
+        stringsList.push(str);
       }
-      return strings;
+      return stringsList;
     }
   }
 });
@@ -211,11 +216,4 @@ Vue.component('curtain-options', {
 new Vue({
   el: '#app'
 });
-
-var name = 'David';
-console.log('Hi, my name is ' + name); // Hi, my name is David
-
-var Test = function Test() {
-  _classCallCheck(this, Test);
-};
 
