@@ -1,5 +1,5 @@
 #! /bin/bash
 
-git add site.js
+git add site.js source.js
 git commit -m "pass"
 git push
