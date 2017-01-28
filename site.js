@@ -109,7 +109,7 @@ Vue.component('curtain-options', {
           <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>\
         </filter>\
           <filter filterUnits="userSpaceOnUse" id="filter" height="402" width="582" >\
-            <feTurbulence baseFrequency="0.2" numOctaves="3" type="fractalNoise" />\
+            <feTurbulence baseFrequency="0.05" numOctaves="3" type="fractalNoise" />\
             <feDisplacementMap scale="2" xChannelSelector="R" in="SourceGraphic" />\
           </filter>\
         </defs>\
@@ -122,9 +122,9 @@ Vue.component('curtain-options', {
          </g>\
          <g>\
           <title>Layer 1</title>\
-          <rect style="filter:url(#filter)" v-for="rect in windowRects" x="{{rect.x}}" y="{{rect.y}}" width="{{rect.width}}" height="{{rect.height}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path style="filter:url(#filter)" v-for="path in panelPaths" d="{{path}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
-          <path style="filter:url(#filter)" v-for="fold in foldPaths" d="{{fold}}" stroke-width="1.5" stroke="#000" fill="#fff"/>\
+          <rect style="filter:url(#filter)" v-for="rect in windowRects" x="{{rect.x}}" y="{{rect.y}}" width="{{rect.width}}" height="{{rect.height}}" stroke-width="1" stroke="#000" fill="#fff"/>\
+          <path style="filter:url(#filter)" v-for="path in panelPaths" d="{{path}}" stroke-width="1" stroke="#000" fill="#fff"/>\
+          <path style="filter:url(#filter)" v-for="fold in foldPaths" d="{{fold}}" stroke-width="1" stroke="#000" fill="#fff"/>\
          </g>\
         </svg>\
       </div>\
@@ -142,7 +142,24 @@ Vue.component('curtain-options', {
       }
     };
   },
-  methods: {},
+  methods: {
+    createWindowRects: function createWindowRects(x, y) {
+      var windowWidth = 84;
+      var windowHeight = 146;
+      var listWidth = 5;
+      return [{
+        x: x,
+        y: y,
+        width: windowWidth,
+        height: windowHeight
+      }, {
+        x: x + listWidth,
+        y: y + listWidth,
+        width: windowWidth - 2 * listWidth,
+        height: windowHeight - 2 * listWidth
+      }];
+    }
+  },
   computed: {
     pocketSpacing: function pocketSpacing() {
       var preferred = 40 / this.panel.fullness;
@@ -182,13 +199,25 @@ Vue.component('curtain-options', {
       }];
     },
     windowRects: function windowRects() {
-      return [{ x: 189, y: 121, width: 84, height: 146 }, { x: 288, y: 121, width: 84, height: 146 }];
+      var windowWidth = 84;
+      var windowHeight = 146;
+      var listWidth = 5;
+
+      /*
+      return [
+        { x: 189, y: 121, width: 84, height: 146 },
+        { x: 288, y: 121, width: 84, height: 146 },
+        { x: 189+10, y: 121+10, width: 84-20, height: 146-20 },
+        { x: 288+10, y: 121+10, width: 84-20, height: 146-20 }
+      ];
+      */
+      return this.createWindowRects(189, 121).concat(this.createWindowRects(288, 121));
     },
     panelPaths: function panelPaths() {
       var stringsList = [];
       for (var i = 0; i < this.numPanels; i++) {
         var rect = this.panelRects[i];
-        var str = 'M' + rect.x + ',' + rect.y + ' c0,0,0,0,' + rect.width + ',0 c0,0,0,0,0,' + rect.height + ' c0,0,0,0,' + -rect.width + ',0 c0,0,0,0,0' + rect.height;
+        var str = 'M' + rect.x + ',' + rect.y + '                    c0,0,0,0,' + rect.width + ',0                    c0,0,0,0,0,' + rect.height + '                    c0,0,0,0,' + -rect.width + ',0                    c0,0,0,0,0' + rect.height;
 
         var numFolds = Math.floor(this.panel.width / this.pocketSpacing);
         var str = 'M' + rect.x + ',' + rect.y;
