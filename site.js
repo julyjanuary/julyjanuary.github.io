@@ -76,9 +76,85 @@ var curveLengths = function curveLengths(amplitude, fullLength) {
 
 var curveLengthsForAmplitude = {};
 
+var getImageData = function getImageData(imageElementId) {
+  var canvas = document.createElement('canvas');
+  var context = canvas.getContext('2d');
+  var img = document.getElementById(imageElementId);
+  if (img == null) return null;
+  //img.onload(function(ev) {
+  //console.log('onload');
+  //});
+  canvas.width = img.width;
+  canvas.height = img.height;
+  context.drawImage(img, 0, 0);
+  return context.getImageData(0, 0, img.width, img.height);
+};
+
+var drawCurtain = function drawCurtain(ctx, panel, v, f, baseimg) {
+  var curtainImageData = getImageData(baseimg);
+  console.log(curtainImageData);
+
+  var numPockets = Math.floor(v.panelWidth / v.pocketLength);
+  var adjustedPocketLength = Math.floor(v.panelWidth / numPockets);
+
+  var fullPocketLenghtPx = Math.floor(f * 2 * v.pocketLength);
+  var A = Math.floor(f * 5); // curtain depth amplitude
+  if (!(A in curveLengthsForAmplitude)) {
+    // Note: pocketLength doesn't change
+    curveLengthsForAmplitude[A] = curveLengths(A, fullPocketLenghtPx);
+  }
+
+  var lengths = curveLengthsForAmplitude[A].lengths;
+  var derivs = curveLengthsForAmplitude[A].derivatives;
+
+  //var lastX = 0;
+  var imgdata = ctx.getImageData(0, 0, panel.width, panel.height);
+  var imgdatalen = imgdata.data.length;
+  for (var i = 0; i < imgdatalen / 4; i++) {
+    for (var k = 0; k < 4; k++) {
+      imgdata.data[4 * i + k] = 255;
+    }var pixelIdx = Math.floor(i);
+    var yIdx = Math.floor(pixelIdx / Math.floor(panel.width));
+    var xIdx = pixelIdx - yIdx * Math.floor(panel.width);
+    var numWhole = Math.floor(xIdx / lengths.length);
+    var idx = xIdx % lengths.length;
+    //if (numWhole > 0) 
+    //idx = 1 + (xIdx) % lengths.length;
+    var curveLength = lengths[idx] + numWhole * lengths[lengths.length - 1];
+    var x = curveLength;
+    //if (yIdx == 0)
+    //console.log(xIdx + ' ' + idx + ' ' + numWhole + ' -> ' + (x-lastX));
+    //lastX = x;
+    var c = (Math.floor(x / 3) + Math.floor(yIdx / 3)) % 2 == 0 ? 150 : 255;
+    var deriv = derivs[idx];
+    var curtainNormal = [deriv, -1];
+    var norm = Math.sqrt(Math.pow(curtainNormal[0], 2) + Math.pow(curtainNormal[1], 2));
+    curtainNormal[0] /= norm;
+    curtainNormal[1] /= norm;
+
+    var lightNormal = [1, -1];
+    norm = Math.sqrt(Math.pow(lightNormal[0], 2) + Math.pow(lightNormal[1], 2));
+    lightNormal[0] /= norm;
+    lightNormal[1] /= norm;
+
+    var diffuseLight = 0.2 * (curtainNormal[0] * lightNormal[0] + curtainNormal[1] * lightNormal[1]);
+    var ambientLight = 0.8;
+    var finalColor = (diffuseLight + ambientLight) * c;
+    finalColor = Math.min(255, finalColor);
+
+    imgdata.data[4 * i] = finalColor;
+    imgdata.data[4 * i + 1] = finalColor;
+    imgdata.data[4 * i + 2] = finalColor;
+    imgdata.data[4 * i + 3] = 255;
+  }
+
+  ctx.putImageData(imgdata, panel.x, panel.y);
+};
+
 Vue.component('curtain-options', {
   template: '\
   <div>\
+    <img id="curtainImg" src="curtain_fabric.jpeg" style="" />\
     <div class="row">\
       <h4>How many panels?</h4>\
       <div class="radio">\
@@ -235,7 +311,7 @@ Vue.component('curtain-options', {
 
       drawRect(ctx, wr, 'window');
       //drawRect(ctx, p1r, 'panel1');
-      drawRect(ctx, p2r, 'panel2');
+      //drawRect(ctx, p2r, 'panel2');
       drawRect(ctx, rod, 'rod');
 
       // Draw the ceiling, floor and wall lines
@@ -281,59 +357,8 @@ Vue.component('curtain-options', {
       ctx.lineTo(f * v.canvasBuffer, h - f * v.canvasBuffer);
       ctx.stroke();
 
-      var numPockets = Math.floor(v.panelWidth / v.pocketLength);
-      var adjustedPocketLength = Math.floor(v.panelWidth / numPockets);
-
-      var fullPocketLenghtPx = Math.floor(f * 2 * v.pocketLength);
-      var A = Math.floor(f * 5); // curtain depth amplitude
-      if (!(A in curveLengthsForAmplitude)) {
-        // Note: pocketLength doesn't change
-        curveLengthsForAmplitude[A] = curveLengths(A, fullPocketLenghtPx);
-      }
-
-      var lengths = curveLengthsForAmplitude[A].lengths;
-      var derivs = curveLengthsForAmplitude[A].derivatives;
-
-      var lastX = 0;
-      var imgdata = ctx.getImageData(0, 0, p1r.width, p1r.height);
-      var imgdatalen = imgdata.data.length;
-      for (var i = 0; i < imgdatalen / 4; i++) {
-        for (var k = 0; k < 4; k++) {
-          imgdata.data[4 * i + k] = 255;
-        }var pixelIdx = Math.floor(i);
-        var yIdx = Math.floor(pixelIdx / Math.floor(p1r.width));
-        var xIdx = pixelIdx - yIdx * Math.floor(p1r.width);
-        var numWhole = Math.floor(xIdx / lengths.length);
-        var idx = xIdx % lengths.length;
-        //if (numWhole > 0) 
-        //idx = 1 + (xIdx) % lengths.length;
-        var curveLength = lengths[idx] + numWhole * lengths[lengths.length - 1];
-        var x = curveLength;
-        if (yIdx == 0) console.log(xIdx + ' ' + idx + ' ' + numWhole + ' -> ' + (x - lastX));
-        lastX = x;
-        var c = (Math.floor(x / 3) + Math.floor(yIdx / 3)) % 2 == 0 ? 150 : 255;
-        var deriv = derivs[idx];
-        var curtainNormal = [deriv, -1];
-        var norm = Math.sqrt(Math.pow(curtainNormal[0], 2) + Math.pow(curtainNormal[1], 2));
-        curtainNormal[0] /= norm;
-        curtainNormal[1] /= norm;
-
-        var lightNormal = [1, -1];
-        norm = Math.sqrt(Math.pow(lightNormal[0], 2) + Math.pow(lightNormal[1], 2));
-        lightNormal[0] /= norm;
-        lightNormal[1] /= norm;
-
-        var diffuseLight = 0.3 * (curtainNormal[0] * lightNormal[0] + curtainNormal[1] * lightNormal[1]);
-        var ambientLight = 0.7;
-        var finalColor = (diffuseLight + ambientLight) * c;
-        finalColor = Math.min(255, finalColor);
-
-        imgdata.data[4 * i] = finalColor;
-        imgdata.data[4 * i + 1] = finalColor;
-        imgdata.data[4 * i + 2] = finalColor;
-        imgdata.data[4 * i + 3] = 255;
-      }
-      ctx.putImageData(imgdata, p1r.x, p1r.y);
+      drawCurtain(ctx, p1r, v, f, "curtainImg");
+      drawCurtain(ctx, p2r, v, f, "curtainImg");
     }
   }
 });
