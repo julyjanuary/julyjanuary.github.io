@@ -30,6 +30,15 @@ hideElement('form[name="articleChoices"]');
 // Article quantity
 hideElement('input[name="quantity"]');
 
+var floorRect = function(r) {
+  return {
+    x: Math.floor(r.x),
+    y: Math.floor(r.y),
+    width: Math.floor(r.width),
+    height: Math.floor(r.height)
+  };
+};
+
 var drawRect = function(ctx, r, name) {
   ctx.beginPath();
   ctx.rect(r.x, r.y, r.width, r.height);
@@ -80,14 +89,10 @@ var curveLengths = function(amplitude, fullLength) {
 var curveLengthsForAmplitude = {
 };
 
-var getImageData = function(imageElementId) {
+var getImageData = function(img) {
   var canvas = document.createElement('canvas');
   var context = canvas.getContext('2d');
-  var img = document.getElementById(imageElementId);
   if (img == null) return null;
-  //img.onload(function(ev) {
-  //console.log('onload');
-  //});
   canvas.width = img.width;
   canvas.height = img.height;
   context.drawImage(img, 0, 0 );
@@ -95,8 +100,7 @@ var getImageData = function(imageElementId) {
 };
 
 var drawCurtain = function(ctx, panel, v, f, baseimg) {
-  var curtainImageData = getImageData(baseimg);
-  console.log(curtainImageData);
+  if (baseimg == null) return;
 
   var numPockets = Math.floor(v.panelWidth / v.pocketLength);
   var adjustedPocketLength = Math.floor(v.panelWidth / numPockets);
@@ -119,37 +123,35 @@ var drawCurtain = function(ctx, panel, v, f, baseimg) {
       imgdata.data[4*i + k] = 255;
 
     var pixelIdx = Math.floor(i);
-    var yIdx = Math.floor(pixelIdx / Math.floor(panel.width));
-    var xIdx = pixelIdx - yIdx*Math.floor(panel.width);
+    var yIdx = Math.floor(pixelIdx / panel.width);
+    var xIdx = Math.floor(pixelIdx - yIdx*panel.width);
     var numWhole = Math.floor(xIdx/lengths.length);
     var idx = xIdx % lengths.length;
-    //if (numWhole > 0) 
-    //idx = 1 + (xIdx) % lengths.length;
     var curveLength = lengths[idx] + numWhole*lengths[lengths.length-1];
     var x = curveLength;
-    //if (yIdx == 0)
-    //console.log(xIdx + ' ' + idx + ' ' + numWhole + ' -> ' + (x-lastX));
-    //lastX = x;
-    var c = (Math.floor(x / 3) + Math.floor(yIdx / 3)) % 2 == 0 ? 150 : 255;
-    var deriv = derivs[idx];
-    var curtainNormal = [deriv, -1];
-    var norm = Math.sqrt(Math.pow(curtainNormal[0], 2) + Math.pow(curtainNormal[1], 2));
-    curtainNormal[0] /= norm;
-    curtainNormal[1] /= norm;
+    var baseIdx = 4*(Math.floor(x+200) % baseimg.width + baseimg.width * (yIdx % baseimg.height));
 
-    var lightNormal = [1, -1];
-    norm = Math.sqrt(Math.pow(lightNormal[0], 2) + Math.pow(lightNormal[1], 2));
-    lightNormal[0] /= norm;
-    lightNormal[1] /= norm;
+    for (var k = 0; k < 3; k++) {
+      var c = baseimg.data[baseIdx+k];
+      var deriv = derivs[idx];
+      var curtainNormal = [deriv, -1];
+      var norm = Math.sqrt(Math.pow(curtainNormal[0], 2) + Math.pow(curtainNormal[1], 2));
+      curtainNormal[0] /= norm;
+      curtainNormal[1] /= norm;
 
-    var diffuseLight = 0.2*(curtainNormal[0]*lightNormal[0] + curtainNormal[1]*lightNormal[1]);
-    var ambientLight = 0.8;
-    var finalColor = (diffuseLight + ambientLight) * c;
-    finalColor = Math.min(255, finalColor);
+      var lightNormal = [1, -1];
+      norm = Math.sqrt(Math.pow(lightNormal[0], 2) + Math.pow(lightNormal[1], 2));
+      lightNormal[0] /= norm;
+      lightNormal[1] /= norm;
 
-    imgdata.data[4*i] = finalColor;
-    imgdata.data[4*i+1] = finalColor;
-    imgdata.data[4*i+2] = finalColor;
+      var diffuseLight = 0.1*(curtainNormal[0]*lightNormal[0] + curtainNormal[1]*lightNormal[1]);
+      var ambientLight = 0.9;
+      var finalColor = (diffuseLight + ambientLight) * c;
+      finalColor = Math.min(255, finalColor);
+
+      imgdata.data[4*i+k] = finalColor;
+    }
+
     imgdata.data[4*i+3] = 255;
   }
 
@@ -160,7 +162,6 @@ var drawCurtain = function(ctx, panel, v, f, baseimg) {
 Vue.component('curtain-options', {
   template: '\
   <div>\
-    <img id="curtainImg" src="curtain_fabric.jpeg" style="" />\
     <div class="row">\
       <h4>How many panels?</h4>\
       <div class="radio">\
@@ -230,6 +231,7 @@ Vue.component('curtain-options', {
        </canvas>\
       </div>\
     </div>\
+    <img id="curtainImg" v-on:load="imgLoad" src="test.jpg" style="display: none" />\
   </div>\
   ',
   data: (function(){ return {
@@ -252,9 +254,13 @@ Vue.component('curtain-options', {
     windowSillHeight: 70,
     canvasMinWidth: 400,
     canvasMinHeight: 300,
-    canvasBuffer: 50
+    canvasBuffer: 50,
+    imgData: null
   }; }),
   methods: {
+    imgLoad: function(event) {
+      this.imgData = getImageData(event.target);
+    },
   },
   computed: {
     price: function () {
@@ -298,30 +304,28 @@ Vue.component('curtain-options', {
         height: f*(v.windowAreaHeight)
       };
 
-      var p1r = {
+      var p1r = floorRect({
         x: wr.x-f*v.panelWidth,
         y: h+f*(-v.panelHeight-v.curtainToFloor-v.canvasBuffer),
         width: f*v.panelWidth,
         height: f*v.panelHeight
-      };
+      });
 
-      var p2r = {
+      var p2r = floorRect({
         x: wr.x+wr.width,
         y: p1r.y,
         width: f*v.panelWidth,
         height: f*v.panelHeight
-      };
+      });
 
-      var rod = {
+      var rod = floorRect({
         x: w/2+f*(-v.windowAreaWidth/2-v.panelWidth),
         y: h+f*(-v.curtainToFloor-v.panelHeight-v.rodToCurtain-v.canvasBuffer),
         width: f*(v.windowAreaWidth+2*v.panelWidth),
         height: f*1
-      };
+      });
 
       drawRect(ctx, wr, 'window');
-      //drawRect(ctx, p1r, 'panel1');
-      //drawRect(ctx, p2r, 'panel2');
       drawRect(ctx, rod, 'rod');
 
       // Draw the ceiling, floor and wall lines
@@ -367,8 +371,8 @@ Vue.component('curtain-options', {
       ctx.lineTo(f*v.canvasBuffer,h-f*v.canvasBuffer);
       ctx.stroke();
 
-      drawCurtain(ctx, p1r, v, f, "curtainImg");
-      drawCurtain(ctx, p2r, v, f, "curtainImg");
+      drawCurtain(ctx, p1r, v, f, v.imgData);
+      drawCurtain(ctx, p2r, v, f, v.imgData);
     }
   }
 });
