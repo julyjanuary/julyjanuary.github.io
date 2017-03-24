@@ -30,6 +30,79 @@ hideElement('form[name="articleChoices"]');
 // Article quantity
 hideElement('input[name="quantity"]');
 
+/**
+ * Writes an image into a canvas taking into
+ * account the backing store pixel ratio and
+ * the device pixel ratio.
+ *
+ * @author Paul Lewis
+ * @param {Object} opts The params for drawing an image to the canvas
+ */
+function drawImage(opts) {
+
+    if(!opts.canvas) {
+        throw("A canvas is required");
+    }
+    if(!opts.image) {
+        throw("Image is required");
+    }
+
+    // get the canvas and context
+    var canvas = opts.canvas,
+        context = canvas.getContext('2d'),
+        image = opts.image,
+
+    // now default all the dimension info
+        srcx = opts.srcx || 0,
+        srcy = opts.srcy || 0,
+        srcw = opts.srcw || image.naturalWidth,
+        srch = opts.srch || image.naturalHeight,
+        desx = opts.desx || srcx,
+        desy = opts.desy || srcy,
+        desw = opts.desw || srcw,
+        desh = opts.desh || srch,
+        auto = opts.auto,
+
+    // finally query the various pixel ratios
+        devicePixelRatio = window.devicePixelRatio || 1,
+        backingStoreRatio = context.webkitBackingStorePixelRatio ||
+                            context.mozBackingStorePixelRatio ||
+                            context.msBackingStorePixelRatio ||
+                            context.oBackingStorePixelRatio ||
+                            context.backingStorePixelRatio || 1,
+
+        ratio = devicePixelRatio / backingStoreRatio;
+
+    // ensure we have a value set for auto.
+    // If auto is set to false then we
+    // will simply not upscale the canvas
+    // and the default behaviour will be maintained
+    if (typeof auto === 'undefined') {
+        auto = true;
+    }
+
+    // upscale the canvas if the two ratios don't match
+    if (auto && devicePixelRatio !== backingStoreRatio) {
+
+        var oldWidth = canvas.width;
+        var oldHeight = canvas.height;
+
+        canvas.width = oldWidth * ratio;
+        canvas.height = oldHeight * ratio;
+
+        canvas.style.width = oldWidth + 'px';
+        canvas.style.height = oldHeight + 'px';
+
+        // now scale the context to counter
+        // the fact that we've manually scaled
+        // our canvas element
+        context.scale(ratio, ratio);
+
+    }
+
+    context.drawImage(pic, srcx, srcy, srcw, srch, desx, desy, desw, desh);
+}
+
 var floorRect = function(r) {
   return {
     x: Math.floor(r.x),
@@ -52,6 +125,57 @@ var drawRect = function(ctx, r, name) {
     r.x+r.width/2-ctx.measureText(name).width/2,
     r.y+r.height/2
   );
+};
+
+var expandRectBy = function(r, extra) {
+  var exp = JSON.parse(JSON.stringify(r));
+  exp.x -= extra;
+  exp.y -= extra;
+  exp.width += 2*extra;
+  exp.height += 2*extra;
+  return exp;
+};
+
+var getInnerRects = function(r, cols, rows, padding) {
+  var rects = [];
+  var innerWidth = r.width / cols;
+  var innerHeight = r.height / rows;
+  for (var col = 0; col < cols; col++)
+  for (var row = 0; row < rows; row++) {
+    rects.push(expandRectBy({
+      x: r.x + innerWidth*col,
+      y: r.y + innerHeight*row,
+      width: innerWidth,
+      height: innerHeight
+    }, -padding));
+  }
+  return rects;
+};
+
+var drawFramePiece = function(ctx, img, wr, side, placeInner, lastPiece) {
+    if (img == undefined) return;
+  if (!placeInner) {
+    var extra = (side == 'left' || side == 'right') ? img.width : img.height;
+    wr = expandRectBy(
+      wr, extra);
+  }
+  var width = Math.min(img.width, wr.width) / (lastPiece ? 2 : 1);
+  var height = Math.min(img.height, wr.height);
+  var sourceX = side == 'bottom' ? img.width-width : 0;
+  var sourceY = side == 'left' ? img.height-height : 0;
+  var canvasX = wr.x + (side == 'right' ? wr.width-img.width : 0);
+  var canvasY = wr.y + (side == 'bottom' ? wr.height-img.height : 0);
+  ctx.drawImage(img, 
+                sourceX, sourceY, width, height,
+                canvasX, canvasY, width, height);
+};
+
+var drawFrame = function(ctx, wr, frameImages, placeInner) {
+  drawFramePiece(ctx, frameImages[0], wr, 'top', placeInner);
+  drawFramePiece(ctx, frameImages[1], wr, 'right', placeInner);
+  drawFramePiece(ctx, frameImages[2], wr, 'bottom', placeInner);
+  drawFramePiece(ctx, frameImages[3], wr, 'left', placeInner);
+  drawFramePiece(ctx, frameImages[0], wr, 'top', placeInner, true);
 };
 
 var curveLengths = function(amplitude, fullLength) {
@@ -115,7 +239,6 @@ var drawCurtain = function(ctx, panel, v, f, baseimg) {
   var lengths = curveLengthsForAmplitude[A].lengths;
   var derivs = curveLengthsForAmplitude[A].derivatives;
 
-  //var lastX = 0;
   var imgdata = ctx.getImageData(0, 0, panel.width, panel.height);
   var imgdatalen = imgdata.data.length;
   for(var i = 0; i < imgdatalen/4; i++){
@@ -231,7 +354,7 @@ Vue.component('curtain-options', {
        </canvas>\
       </div>\
     </div>\
-    <img id="curtainImg" v-on:load="imgLoad" src="test.jpg" style="display: none" />\
+    <img id="curtainImg" src="right.png" style="display: none" />\
   </div>\
   ',
   data: (function(){ return {
@@ -255,12 +378,24 @@ Vue.component('curtain-options', {
     canvasMinWidth: 400,
     canvasMinHeight: 300,
     canvasBuffer: 50,
-    imgData: null
+    images: {}
   }; }),
   methods: {
     imgLoad: function(event) {
-      this.imgData = getImageData(event.target);
-    },
+      self = this;
+      ['left.png', 'right.png', 'top.png', 'bottom.png',
+        'left_inner.png', 'right_inner.png', 'top_inner.png', 'bottom_inner.png']
+        .forEach(function(url) {
+          var img = new Image();
+          img.src = url;
+          img.onload = function(){
+            Vue.set(self.images, url, img)
+          };
+        });
+    }
+  },
+  created: function(event) {
+    this.imgLoad();
   },
   computed: {
     price: function () {
@@ -295,6 +430,8 @@ Vue.component('curtain-options', {
       var h = canvasElement.height;
       var f = v.cmToPixels;
       var ctx = canvasElement.getContext("2d");
+      ctx.lineWidth = 1;
+      //ctx.translate(0.5, 0.5)
       ctx.clearRect(0, 0, w, h);
       
       var wr = {
@@ -303,6 +440,18 @@ Vue.component('curtain-options', {
         width: f*(v.windowAreaWidth),
         height: f*(v.windowAreaHeight)
       };
+
+      var outerFrameUrls = ['top.png', 'right.png', 'bottom.png', 'left.png'];
+      var innerFrameUrls = ['top_inner.png', 'right_inner.png', 
+                            'bottom_inner.png', 'left_inner.png'];
+      var outerFrameImgs = outerFrameUrls.map(function(url) { return v.images[url]; });
+      var innerFrameImgs = innerFrameUrls.map(function(url) { return v.images[url]; });
+
+      drawFrame(ctx, wr, outerFrameImgs, false);
+      var innerWindowRects = getInnerRects(wr, 3, 2, 5);
+      innerWindowRects.forEach(function(innerRect) {
+        drawFrame(ctx, innerRect, innerFrameImgs, true);
+      });
 
       var p1r = floorRect({
         x: wr.x-f*v.panelWidth,
@@ -325,7 +474,7 @@ Vue.component('curtain-options', {
         height: f*1
       });
 
-      drawRect(ctx, wr, 'window');
+      //drawRect(ctx, wr, 'window');
       drawRect(ctx, rod, 'rod');
 
       // Draw the ceiling, floor and wall lines
@@ -371,12 +520,12 @@ Vue.component('curtain-options', {
       ctx.lineTo(f*v.canvasBuffer,h-f*v.canvasBuffer);
       ctx.stroke();
 
-      drawCurtain(ctx, p1r, v, f, v.imgData);
-      drawCurtain(ctx, p2r, v, f, v.imgData);
+      drawCurtain(ctx, p1r, v, f, getImageData(v.images['curtain']));
+      drawCurtain(ctx, p2r, v, f, getImageData(v.images['curtain']));
     }
   }
 });
 
-new Vue({
+var vm = new Vue({
   el: '#app'
 });

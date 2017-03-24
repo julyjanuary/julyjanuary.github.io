@@ -51,6 +51,54 @@ var drawRect = function drawRect(ctx, r, name) {
   ctx.fillText(name, r.x + r.width / 2 - ctx.measureText(name).width / 2, r.y + r.height / 2);
 };
 
+var expandRectBy = function expandRectBy(r, extra) {
+  var exp = JSON.parse(JSON.stringify(r));
+  exp.x -= extra;
+  exp.y -= extra;
+  exp.width += 2 * extra;
+  exp.height += 2 * extra;
+  return exp;
+};
+
+var getInnerRects = function getInnerRects(r, cols, rows, padding) {
+  var rects = [];
+  var innerWidth = r.width / cols;
+  var innerHeight = r.height / rows;
+  for (var col = 0; col < cols; col++) {
+    for (var row = 0; row < rows; row++) {
+      rects.push(expandRectBy({
+        x: r.x + innerWidth * col,
+        y: r.y + innerHeight * row,
+        width: innerWidth,
+        height: innerHeight
+      }, -padding));
+    }
+  }return rects;
+};
+
+var drawFramePiece = function drawFramePiece(ctx, img, wr, side, placeInner, lastPiece) {
+  if (img == undefined) return;
+  if (!placeInner) {
+    var extra = side == 'left' || side == 'right' ? img.width : img.height;
+    wr = expandRectBy(wr, extra);
+  }
+  var width = Math.min(img.width, wr.width) / (lastPiece ? 2 : 1);
+  var height = Math.min(img.height, wr.height);
+  var sourceX = side == 'bottom' ? img.width - width : 0;
+  var sourceY = side == 'left' ? img.height - height : 0;
+  var canvasX = wr.x + (side == 'right' ? wr.width - img.width : 0);
+  var canvasY = wr.y + (side == 'bottom' ? wr.height - img.height : 0);
+  ctx.drawImage(img, sourceX, sourceY, width, height, canvasX, canvasY, width, height);
+};
+
+var drawFrame = function drawFrame(ctx, wr, frameImages, placeInner) {
+  drawFramePiece(ctx, frameImages[0], wr, 'top', placeInner);
+  drawFramePiece(ctx, frameImages[1], wr, 'right', placeInner);
+  drawFramePiece(ctx, frameImages[2], wr, 'bottom', placeInner);
+  drawFramePiece(ctx, frameImages[3], wr, 'left', placeInner);
+  drawFramePiece(ctx, frameImages[0], wr, 'top', placeInner, true);
+};
+
 var curveLengths = function curveLengths(amplitude, fullLength) {
   var ys = [];
   for (var x = 0; x < fullLength; x++) {
@@ -111,7 +159,6 @@ var drawCurtain = function drawCurtain(ctx, panel, v, f, baseimg) {
   var lengths = curveLengthsForAmplitude[A].lengths;
   var derivs = curveLengthsForAmplitude[A].derivatives;
 
-  //var lastX = 0;
   var imgdata = ctx.getImageData(0, 0, panel.width, panel.height);
   var imgdatalen = imgdata.data.length;
   for (var i = 0; i < imgdatalen / 4; i++) {
@@ -225,7 +272,7 @@ Vue.component('curtain-options', {
        </canvas>\
       </div>\
     </div>\
-    <img id="curtainImg" v-on:load="imgLoad" src="test.jpg" style="display: none" />\
+    <img id="curtainImg" src="right.png" style="display: none" />\
   </div>\
   ',
   data: function data() {
@@ -250,13 +297,23 @@ Vue.component('curtain-options', {
       canvasMinWidth: 400,
       canvasMinHeight: 300,
       canvasBuffer: 50,
-      imgData: null
+      images: {}
     };
   },
   methods: {
     imgLoad: function imgLoad(event) {
-      this.imgData = getImageData(event.target);
+      self = this;
+      ['left.png', 'right.png', 'top.png', 'bottom.png', 'left_inner.png', 'right_inner.png', 'top_inner.png', 'bottom_inner.png'].forEach(function (url) {
+        var img = new Image();
+        img.src = url;
+        img.onload = function () {
+          Vue.set(self.images, url, img);
+        };
+      });
     }
+  },
+  created: function created(event) {
+    this.imgLoad();
   },
   computed: {
     price: function price() {
@@ -286,6 +343,8 @@ Vue.component('curtain-options', {
       var h = canvasElement.height;
       var f = v.cmToPixels;
       var ctx = canvasElement.getContext("2d");
+      ctx.lineWidth = 1;
+      ctx.translate(0.5, 0.5);
       ctx.clearRect(0, 0, w, h);
 
       var wr = {
@@ -294,6 +353,21 @@ Vue.component('curtain-options', {
         width: f * v.windowAreaWidth,
         height: f * v.windowAreaHeight
       };
+
+      var outerFrameUrls = ['top.png', 'right.png', 'bottom.png', 'left.png'];
+      var innerFrameUrls = ['top_inner.png', 'right_inner.png', 'bottom_inner.png', 'left_inner.png'];
+      var outerFrameImgs = outerFrameUrls.map(function (url) {
+        return v.images[url];
+      });
+      var innerFrameImgs = innerFrameUrls.map(function (url) {
+        return v.images[url];
+      });
+
+      drawFrame(ctx, wr, outerFrameImgs, false);
+      var innerWindowRects = getInnerRects(wr, 3, 2, 5);
+      innerWindowRects.forEach(function (innerRect) {
+        drawFrame(ctx, innerRect, innerFrameImgs, true);
+      });
 
       var p1r = floorRect({
         x: wr.x - f * v.panelWidth,
@@ -316,7 +390,7 @@ Vue.component('curtain-options', {
         height: f * 1
       });
 
-      drawRect(ctx, wr, 'window');
+      //drawRect(ctx, wr, 'window');
       drawRect(ctx, rod, 'rod');
 
       // Draw the ceiling, floor and wall lines
@@ -362,13 +436,13 @@ Vue.component('curtain-options', {
       ctx.lineTo(f * v.canvasBuffer, h - f * v.canvasBuffer);
       ctx.stroke();
 
-      drawCurtain(ctx, p1r, v, f, v.imgData);
-      drawCurtain(ctx, p2r, v, f, v.imgData);
+      drawCurtain(ctx, p1r, v, f, getImageData(v.images['curtain']));
+      drawCurtain(ctx, p2r, v, f, getImageData(v.images['curtain']));
     }
   }
 });
 
-new Vue({
+var vm = new Vue({
   el: '#app'
 });
 
