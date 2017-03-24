@@ -1,3 +1,8 @@
+OUTER_FRAME_URLS = ['top.png', 'right.png', 'bottom.png', 'left.png'];
+INNER_FRAME_URLS = [
+  'top_inner.png', 'right_inner.png', 'bottom_inner.png', 'left_inner.png'
+];
+
 MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 
 var hideElement = function(selector) {
@@ -383,15 +388,14 @@ Vue.component('curtain-options', {
   methods: {
     imgLoad: function(event) {
       self = this;
-      ['left.png', 'right.png', 'top.png', 'bottom.png',
-        'left_inner.png', 'right_inner.png', 'top_inner.png', 'bottom_inner.png']
-        .forEach(function(url) {
-          var img = new Image();
-          img.src = url;
-          img.onload = function(){
-            Vue.set(self.images, url, img)
-          };
-        });
+      OUTER_FRAME_URLS.concat(INNER_FRAME_URLS)
+      .forEach(function(url) {
+        var img = new Image();
+        img.src = url;
+        img.onload = function(){
+          Vue.set(self.images, url, img)
+        };
+      });
     }
   },
   created: function(event) {
@@ -441,11 +445,8 @@ Vue.component('curtain-options', {
         height: f*(v.windowAreaHeight)
       };
 
-      var outerFrameUrls = ['top.png', 'right.png', 'bottom.png', 'left.png'];
-      var innerFrameUrls = ['top_inner.png', 'right_inner.png', 
-                            'bottom_inner.png', 'left_inner.png'];
-      var outerFrameImgs = outerFrameUrls.map(function(url) { return v.images[url]; });
-      var innerFrameImgs = innerFrameUrls.map(function(url) { return v.images[url]; });
+      var outerFrameImgs = OUTER_FRAME_URLS.map(function(url) { return v.images[url]; });
+      var innerFrameImgs = INNER_FRAME_URLS.map(function(url) { return v.images[url]; });
 
       drawFrame(ctx, wr, outerFrameImgs, false);
       var innerWindowRects = getInnerRects(wr, 3, 2, 5);
