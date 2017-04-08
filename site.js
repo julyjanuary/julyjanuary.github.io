@@ -1,5 +1,16 @@
 'use strict';
 
+var OUTER_FRAME_URLS = ['psd/frame_top.png', 'psd/frame_right.png', 'psd/frame_bottom.png', 'psd/frame_left.png'];
+var INNER_FRAME_URLS = ['top_inner.png', 'right_inner.png', 'bottom_inner.png', 'left_inner.png'];
+var LINES_URLS = ['psd/line_thick_horizontal.png', 'psd/line_thick_vertical.png', 'psd/line_thin_horizontal.png', 'psd/line_thin_vertical.png'];
+var OTHER_URLS = [
+//'rod.png', 
+//'rod_start.png',
+//'rod_end.png',
+'curtain.png'
+//'curtain_fabric.jpeg'
+];
+
 MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 
 var hideElement = function hideElement(selector) {
@@ -31,6 +42,41 @@ hideElement('form[name="articleChoices"]');
 // Article quantity
 hideElement('input[name="quantity"]');
 
+var PIXEL_RATIO = function () {
+  var ctx = document.createElement("canvas").getContext("2d"),
+      dpr = window.devicePixelRatio || 1,
+      bsr = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
+
+  return dpr / bsr;
+}();
+
+var _rescaleCanvas = function _rescaleCanvas(canvas) {
+  // finally query the various pixel ratios
+  var ctx = canvas.getContext('2d');
+
+  var devicePixelRatio = window.devicePixelRatio || 1;
+  var backingStoreRatio = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
+  var ratio = devicePixelRatio / backingStoreRatio;
+
+  // upscale the canvas if the two ratios don't match
+  if (devicePixelRatio !== backingStoreRatio) {
+
+    var oldWidth = canvas.width;
+    var oldHeight = canvas.height;
+
+    canvas.width = oldWidth * ratio;
+    canvas.height = oldHeight * ratio;
+
+    canvas.style.width = oldWidth + 'px';
+    canvas.style.height = oldHeight + 'px';
+
+    // now scale the context to counter
+    // the fact that we've manually scaled
+    // our canvas element
+    //ctx.scale(ratio, ratio);
+  }
+};
+
 var floorRect = function floorRect(r) {
   return {
     x: Math.floor(r.x),
@@ -43,7 +89,7 @@ var floorRect = function floorRect(r) {
 var drawRect = function drawRect(ctx, r, name) {
   ctx.beginPath();
   ctx.rect(r.x, r.y, r.width, r.height);
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 1;
   ctx.strokeStyle = 'black';
   ctx.stroke();
 
@@ -74,6 +120,19 @@ var getInnerRects = function getInnerRects(r, cols, rows, padding) {
       }, -padding));
     }
   }return rects;
+};
+
+var drawLine = function drawLine(ctx, lineImg, startPoint, endPoint) {
+  if (lineImg == undefined) return;
+  var dx = endPoint[0] - startPoint[0];
+  var dy = endPoint[1] - startPoint[1];
+  var angle = Math.atan2(dy, dx);
+  ctx.translate(startPoint[0], startPoint[1]);
+  ctx.rotate(angle);
+  var width = Math.sqrt(dx * dx + dy * dy);
+  ctx.drawImage(lineImg, 0, 0, width, lineImg.height, 0, -lineImg.height / 2, width, lineImg.height);
+  ctx.rotate(-angle);
+  ctx.translate(-startPoint[0], -startPoint[1]);
 };
 
 var drawFramePiece = function drawFramePiece(ctx, img, wr, side, placeInner, lastPiece) {
@@ -285,7 +344,7 @@ Vue.component('curtain-options', {
       hangingType: 'rodpocket',
       closedFullness: 1.5,
       // affects style
-      cmToPixels: 1.5,
+      cmToPixels: 3,
       pocketLength: 8,
       ceilingHeight: 300,
       curtainToFloor: 3,
@@ -303,7 +362,7 @@ Vue.component('curtain-options', {
   methods: {
     imgLoad: function imgLoad(event) {
       self = this;
-      ['left.png', 'right.png', 'top.png', 'bottom.png', 'left_inner.png', 'right_inner.png', 'top_inner.png', 'bottom_inner.png'].forEach(function (url) {
+      OUTER_FRAME_URLS.concat(INNER_FRAME_URLS).concat(LINES_URLS).concat(OTHER_URLS).forEach(function (url) {
         var img = new Image();
         img.src = url;
         img.onload = function () {
@@ -330,21 +389,26 @@ Vue.component('curtain-options', {
       return this.$data;
     },
     canvasWidth: function canvasWidth() {
-      return this.cmToPixels * (this.windowAreaWidth + 2 * this.panelWidth + 2 * this.canvasBuffer + 2 * this.wallToCurtain);
+      return PIXEL_RATIO * this.cmToPixels * (this.windowAreaWidth + 2 * this.panelWidth + 2 * this.canvasBuffer + 2 * this.wallToCurtain);
     },
     canvasHeight: function canvasHeight() {
-      return this.cmToPixels * (this.ceilingHeight + this.canvasBuffer * 2);
+      return PIXEL_RATIO * this.cmToPixels * (this.ceilingHeight + this.canvasBuffer * 2);
     }
   },
   directives: {
+    rescaleCanvas: function rescaleCanvas(canvasElement, binding) {
+      _rescaleCanvas(canvasElement);
+    },
     drawCanvas: function drawCanvas(canvasElement, binding) {
       var v = binding.value;
-      var w = canvasElement.width;
-      var h = canvasElement.height;
+      var w = canvasElement.width / PIXEL_RATIO;
+      var h = canvasElement.height / PIXEL_RATIO;
       var f = v.cmToPixels;
+
+      canvasElement.style.width = canvasElement.width / PIXEL_RATIO + 'px';
+      canvasElement.style.height = canvasElement.height / PIXEL_RATIO + 'px';
       var ctx = canvasElement.getContext("2d");
       ctx.lineWidth = 1;
-      ctx.translate(0.5, 0.5);
       ctx.clearRect(0, 0, w, h);
 
       var wr = {
@@ -354,30 +418,31 @@ Vue.component('curtain-options', {
         height: f * v.windowAreaHeight
       };
 
-      var outerFrameUrls = ['top.png', 'right.png', 'bottom.png', 'left.png'];
-      var innerFrameUrls = ['top_inner.png', 'right_inner.png', 'bottom_inner.png', 'left_inner.png'];
-      var outerFrameImgs = outerFrameUrls.map(function (url) {
+      var outerFrameImgs = OUTER_FRAME_URLS.map(function (url) {
         return v.images[url];
       });
-      var innerFrameImgs = innerFrameUrls.map(function (url) {
+      var innerFrameImgs = INNER_FRAME_URLS.map(function (url) {
+        return v.images[url];
+      });
+      var linesImgs = LINES_URLS.map(function (url) {
         return v.images[url];
       });
 
       drawFrame(ctx, wr, outerFrameImgs, false);
-      var innerWindowRects = getInnerRects(wr, 3, 2, 5);
+      var innerWindowRects = getInnerRects(wr, 6, 4, 5);
       innerWindowRects.forEach(function (innerRect) {
         drawFrame(ctx, innerRect, innerFrameImgs, true);
       });
 
       var p1r = floorRect({
-        x: wr.x - f * v.panelWidth,
+        x: wr.x - f * v.panelWidth - 45,
         y: h + f * (-v.panelHeight - v.curtainToFloor - v.canvasBuffer),
         width: f * v.panelWidth,
         height: f * v.panelHeight
       });
 
       var p2r = floorRect({
-        x: wr.x + wr.width,
+        x: wr.x + wr.width + 45,
         y: p1r.y,
         width: f * v.panelWidth,
         height: f * v.panelHeight
@@ -393,51 +458,75 @@ Vue.component('curtain-options', {
       //drawRect(ctx, wr, 'window');
       drawRect(ctx, rod, 'rod');
 
-      // Draw the ceiling, floor and wall lines
-      // Ceiling line
-      ctx.beginPath();
-      ctx.moveTo(f * v.canvasBuffer, f * v.canvasBuffer);
-      ctx.lineTo(w - f * v.canvasBuffer, f * v.canvasBuffer);
-      ctx.stroke();
-      // Floor line
-      ctx.beginPath();
-      ctx.moveTo(f * v.canvasBuffer, h - f * v.canvasBuffer);
-      ctx.lineTo(w - f * v.canvasBuffer, h - f * v.canvasBuffer);
-      ctx.stroke();
-      // Wall lines
-      ctx.beginPath();
-      ctx.moveTo(f * v.canvasBuffer, f * v.canvasBuffer);
-      ctx.lineTo(f * v.canvasBuffer, h - f * v.canvasBuffer);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(w - f * v.canvasBuffer, f * v.canvasBuffer);
-      ctx.lineTo(w - f * v.canvasBuffer, h - f * v.canvasBuffer);
-      ctx.stroke();
-
+      var lineCoords = [
+      // ceiling
+      [[f * v.canvasBuffer, f * v.canvasBuffer], [w - f * v.canvasBuffer, f * v.canvasBuffer]],
+      // floor
+      [[f * v.canvasBuffer, h - f * v.canvasBuffer], [w - f * v.canvasBuffer, h - f * v.canvasBuffer]],
+      // wall
+      [[f * v.canvasBuffer, f * v.canvasBuffer], [f * v.canvasBuffer, h - f * v.canvasBuffer]], [[w - f * v.canvasBuffer, f * v.canvasBuffer], [w - f * v.canvasBuffer, h - f * v.canvasBuffer]],
       // 4 diagonal corners
       // TL
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(f * v.canvasBuffer, f * v.canvasBuffer);
+      [[0, 0], [f * v.canvasBuffer, f * v.canvasBuffer]],
+      // TR
+      [[w, h], [w - f * v.canvasBuffer, h - f * v.canvasBuffer]],
+      // BL
+      [[w, 0], [w - f * v.canvasBuffer, f * v.canvasBuffer]],
+      // BR
+      [[0, h], [f * v.canvasBuffer, h - f * v.canvasBuffer]]];
+
+      lineCoords.forEach(function (line) {
+        drawLine(ctx, linesImgs[2], line[0], line[1]);
+      });
+
+      // Draw the ceiling, floor and wall lines
+      // Ceiling line
+      /*
+      ctx.beginPath(); 
+      ctx.moveTo(f*v.canvasBuffer, f*v.canvasBuffer);
+      ctx.lineTo(w-f*v.canvasBuffer, f*v.canvasBuffer);
+      ctx.stroke();
+      // Floor line
+      ctx.beginPath(); 
+      ctx.moveTo(f*v.canvasBuffer,h-f*v.canvasBuffer);
+      ctx.lineTo(w-f*v.canvasBuffer,h-f*v.canvasBuffer);
+      ctx.stroke();
+      */
+      // Wall lines
+      /*
+      ctx.beginPath(); 
+      ctx.moveTo(f*v.canvasBuffer, f*v.canvasBuffer);
+      ctx.lineTo(f*v.canvasBuffer, h-f*v.canvasBuffer);
+      ctx.stroke();
+      ctx.beginPath(); 
+      ctx.moveTo(w-f*v.canvasBuffer, f*v.canvasBuffer);
+      ctx.lineTo(w-f*v.canvasBuffer, h-f*v.canvasBuffer);
+      ctx.stroke();
+       // 4 diagonal corners
+      // TL
+      ctx.beginPath(); 
+      ctx.moveTo(0,0);
+      ctx.lineTo(f*v.canvasBuffer,f*v.canvasBuffer);
       ctx.stroke();
       // TR
-      ctx.beginPath();
-      ctx.moveTo(w, h);
-      ctx.lineTo(w - f * v.canvasBuffer, h - f * v.canvasBuffer);
+      ctx.beginPath(); 
+      ctx.moveTo(w,h);
+      ctx.lineTo(w-f*v.canvasBuffer,h-f*v.canvasBuffer);
       ctx.stroke();
       // BL
-      ctx.beginPath();
-      ctx.moveTo(w, 0);
-      ctx.lineTo(w - f * v.canvasBuffer, f * v.canvasBuffer);
+      ctx.beginPath(); 
+      ctx.moveTo(w,0);
+      ctx.lineTo(w-f*v.canvasBuffer,f*v.canvasBuffer);
       ctx.stroke();
       // BR
-      ctx.beginPath();
-      ctx.moveTo(0, h);
-      ctx.lineTo(f * v.canvasBuffer, h - f * v.canvasBuffer);
+      ctx.beginPath(); 
+      ctx.moveTo(0,h);
+      ctx.lineTo(f*v.canvasBuffer,h-f*v.canvasBuffer);
       ctx.stroke();
+      */
 
-      drawCurtain(ctx, p1r, v, f, getImageData(v.images['curtain']));
-      drawCurtain(ctx, p2r, v, f, getImageData(v.images['curtain']));
+      drawCurtain(ctx, p1r, v, f, getImageData(v.images['curtain.png']));
+      drawCurtain(ctx, p2r, v, f, getImageData(v.images['curtain.png']));
     }
   }
 });
