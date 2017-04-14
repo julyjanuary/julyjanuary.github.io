@@ -7,11 +7,12 @@ var OUTER_FRAME_URLS = [
 ];
 
 var LINES_URLS = [
-  'line_thick_horizontal.png',
-  'line_thick_vertical.png',
-  'line_thin_horizontal.png',
-  'line_thin_vertical.png'
+  'line_thin.png',
+  'line_medium.png',
+  'line_thick.png'
 ];
+
+var LINE_THICKNESS = [2, 3, 4];
 
 var OTHER_URLS = [
   //'rod.png', 
@@ -121,6 +122,20 @@ var drawRect = function(ctx, r, name) {
   );
 };
 
+var drawLineRect = function(ctx, lineIdx, linesImgs, rect) {
+  var tl = [rect.x, rect.y];
+  var tr = [rect.x+rect.width, rect.y];
+  var br = [rect.x+rect.width, rect.y+rect.height];
+  var bl = [rect.x, rect.y+rect.height];
+  var lineIdx = 1;
+  var img = linesImgs[lineIdx];
+  var thickness = LINE_THICKNESS[lineIdx];
+  drawLine(ctx, img, thickness, tl, tr);
+  drawLine(ctx, img, thickness, tr, br);
+  drawLine(ctx, img, thickness, br, bl);
+  drawLine(ctx, img, thickness, bl, tl);
+};
+
 var expandRectBy = function(r, extra) {
   var exp = JSON.parse(JSON.stringify(r));
   exp.x -= extra;
@@ -141,12 +156,13 @@ var getInnerRects = function(r, cols, rows, padding) {
       y: r.y + innerHeight*row,
       width: innerWidth,
       height: innerHeight
+
     }, -padding));
   }
   return rects;
 };
 
-var drawLine = function(ctx, lineImg, startPoint, endPoint) {
+var drawLine = function(ctx, lineImg, lineThickness, startPoint, endPoint) {
   if (lineImg == undefined) return;
   var dx = endPoint[0]-startPoint[0];
   var dy = endPoint[1]-startPoint[1];
@@ -154,9 +170,11 @@ var drawLine = function(ctx, lineImg, startPoint, endPoint) {
   ctx.translate(startPoint[0], startPoint[1]);
   ctx.rotate(angle);
   var width = Math.sqrt(dx*dx + dy*dy);
+  var sideExtra = lineThickness/4;
+  var offset = Math.floor(Math.random() * (lineImg.width - width));
   ctx.drawImage(lineImg, 
-                0, 0, width, lineImg.height,
-                0, -lineImg.height/2, width, lineImg.height);
+                offset, 0, width+2*sideExtra, lineImg.height,
+                -sideExtra, -lineImg.height/2, width+sideExtra*2, lineImg.height);
   ctx.rotate(-angle);
   ctx.translate(-startPoint[0], -startPoint[1]);
 };
@@ -281,10 +299,10 @@ var drawCurtain = function(ctx, panel, v, f, baseimg) {
       var finalColor = (diffuseLight + ambientLight) * c;
       finalColor = Math.min(255, finalColor);
 
-      imgdata.data[4*i+k] = finalColor;
+      imgdata.data[4*i + k] = finalColor;
     }
 
-    imgdata.data[4*i+3] = 255;
+    imgdata.data[4*i + 3] = 255;
   }
 
   ctx.putImageData(imgdata, panel.x, panel.y);
@@ -370,7 +388,7 @@ Vue.component('curtain-options', {
     // affects price
     numPanels: 2,
     panelWidth: 100,
-    panelHeight: 240,
+    panelHeight: 280,
     mountType: 'wall',
     hangingType: 'rodpocket',
     closedFullness: 1.5,
@@ -381,8 +399,8 @@ Vue.component('curtain-options', {
     curtainToFloor: 3,
     rodToCurtain: 5,
     wallToCurtain: 20,
-    windowAreaWidth: 84*2,
-    windowAreaHeight: 146,
+    windowAreaWidth: 84+2*45/3,
+    windowAreaHeight: 146+2*45/3,
     windowSillHeight: 70,
     canvasMinWidth: 400,
     canvasMinHeight: 300,
@@ -448,6 +466,9 @@ Vue.component('curtain-options', {
       var ctx = canvasElement.getContext("2d");
       ctx.lineWidth = 1;
       ctx.clearRect(0, 0, w, h);
+
+      var outerFrameImgs = OUTER_FRAME_URLS.map(function(url) { return v.images[url]; });
+      var linesImgs = LINES_URLS.map(function(url) { return v.images[url]; });
       
       var wr = {
         x: w/2+f*(-v.windowAreaWidth/2),
@@ -456,22 +477,12 @@ Vue.component('curtain-options', {
         height: f*(v.windowAreaHeight)
       };
 
-      var outerFrameImgs = OUTER_FRAME_URLS.map(function(url) { return v.images[url]; });
-      var linesImgs = LINES_URLS.map(function(url) { return v.images[url]; });
+      drawFrame(ctx, wr, outerFrameImgs, true);
 
-      drawFrame(ctx, wr, outerFrameImgs, false);
-      var innerWindowRects = getInnerRects(wr, 6, 4, 5);
-      innerWindowRects.forEach(function(innerRect) {
-        var tl = [innerRect.x, innerRect.y];
-        var tr = [innerRect.x+innerRect.width, innerRect.y];
-        var br = [innerRect.x+innerRect.width, innerRect.y+innerRect.height];
-        var bl = [innerRect.x, innerRect.y+innerRect.height];
-        var img = linesImgs[2];
-        drawLine(ctx, img, tl, tr);
-        drawLine(ctx, img, tr, br);
-        drawLine(ctx, img, br, bl);
-        drawLine(ctx, img, bl, tl);
-      });
+      var frameWidth = (outerFrameImgs[0] || { 'height': 0 }).height;
+      var innerRect = expandRectBy(wr, -frameWidth);
+      var innerWindowRects = getInnerRects(innerRect, 3, 4, 5);
+      innerWindowRects.forEach(drawLineRect.bind(null, ctx, 1, linesImgs));
 
       var p1r = floorRect({
         x: wr.x-f*v.panelWidth,
@@ -491,10 +502,10 @@ Vue.component('curtain-options', {
         x: w/2+f*(-v.windowAreaWidth/2-v.panelWidth),
         y: h+f*(-v.curtainToFloor-v.panelHeight-v.rodToCurtain-v.canvasBuffer),
         width: f*(v.windowAreaWidth+2*v.panelWidth),
-        height: f*1
+        height: f*2.5
       });
 
-      drawRect(ctx, rod, 'rod');
+      drawLineRect(ctx, 1, linesImgs, rod);
 
       var lineCoords = [
         // ceiling
@@ -516,7 +527,10 @@ Vue.component('curtain-options', {
       ];
 
       lineCoords.forEach(function(line) {
-        drawLine(ctx, linesImgs[2], line[0], line[1]);
+        var lineIdx = 2;
+        var img = linesImgs[lineIdx]
+        var thickness = LINE_THICKNESS[lineIdx];
+        drawLine(ctx, img, thickness, line[0], line[1]);
       });
 
       drawCurtain(ctx, p1r, v, f, getImageData(v.images['curtain.png']));
