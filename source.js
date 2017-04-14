@@ -1,13 +1,18 @@
-var OUTER_FRAME_URLS = ['psd/frame_top.png', 'psd/frame_right.png', 'psd/frame_bottom.png', 'psd/frame_left.png'];
-var INNER_FRAME_URLS = [
-  'top_inner.png', 'right_inner.png', 'bottom_inner.png', 'left_inner.png'
+var IMAGE_BASE = 'images/';
+var OUTER_FRAME_URLS = [
+  'frame_top.png',
+  'frame_right.png',
+  'frame_bottom.png',
+  'frame_left.png'
 ];
+
 var LINES_URLS = [
-  'psd/line_thick_horizontal.png',
-  'psd/line_thick_vertical.png',
-  'psd/line_thin_horizontal.png',
-  'psd/line_thin_vertical.png'
+  'line_thick_horizontal.png',
+  'line_thick_vertical.png',
+  'line_thin_horizontal.png',
+  'line_thin_vertical.png'
 ];
+
 var OTHER_URLS = [
   //'rod.png', 
   //'rod_start.png',
@@ -388,12 +393,11 @@ Vue.component('curtain-options', {
     imgLoad: function(event) {
       self = this;
       OUTER_FRAME_URLS
-      .concat(INNER_FRAME_URLS)
       .concat(LINES_URLS)
       .concat(OTHER_URLS)
       .forEach(function(url) {
         var img = new Image();
-        img.src = url;
+        img.src = IMAGE_BASE+url;
         img.onload = function(){
           Vue.set(self.images, url, img)
         };
@@ -453,24 +457,31 @@ Vue.component('curtain-options', {
       };
 
       var outerFrameImgs = OUTER_FRAME_URLS.map(function(url) { return v.images[url]; });
-      var innerFrameImgs = INNER_FRAME_URLS.map(function(url) { return v.images[url]; });
       var linesImgs = LINES_URLS.map(function(url) { return v.images[url]; });
 
       drawFrame(ctx, wr, outerFrameImgs, false);
       var innerWindowRects = getInnerRects(wr, 6, 4, 5);
       innerWindowRects.forEach(function(innerRect) {
-        drawFrame(ctx, innerRect, innerFrameImgs, true);
+        var tl = [innerRect.x, innerRect.y];
+        var tr = [innerRect.x+innerRect.width, innerRect.y];
+        var br = [innerRect.x+innerRect.width, innerRect.y+innerRect.height];
+        var bl = [innerRect.x, innerRect.y+innerRect.height];
+        var img = linesImgs[2];
+        drawLine(ctx, img, tl, tr);
+        drawLine(ctx, img, tr, br);
+        drawLine(ctx, img, br, bl);
+        drawLine(ctx, img, bl, tl);
       });
 
       var p1r = floorRect({
-        x: wr.x-f*v.panelWidth-45,
+        x: wr.x-f*v.panelWidth,
         y: h+f*(-v.panelHeight-v.curtainToFloor-v.canvasBuffer),
         width: f*v.panelWidth,
         height: f*v.panelHeight
       });
 
       var p2r = floorRect({
-        x: wr.x+wr.width+45,
+        x: wr.x+wr.width,
         y: p1r.y,
         width: f*v.panelWidth,
         height: f*v.panelHeight
@@ -483,7 +494,6 @@ Vue.component('curtain-options', {
         height: f*1
       });
 
-      //drawRect(ctx, wr, 'window');
       drawRect(ctx, rod, 'rod');
 
       var lineCoords = [
