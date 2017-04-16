@@ -183,8 +183,7 @@ var drawFramePiece = function(ctx, img, wr, side, placeInner, lastPiece) {
   if (img == undefined) return;
   if (!placeInner) {
     var extra = (side == 'left' || side == 'right') ? img.width : img.height;
-    wr = expandRectBy(
-      wr, extra);
+    wr = expandRectBy(wr, extra);
   }
   var width = Math.min(img.width, wr.width) / (lastPiece ? 2 : 1);
   var height = Math.min(img.height, wr.height);
@@ -235,11 +234,19 @@ var curveLengths = function(amplitude, fullLength) {
     lengths: lengths,
     derivatives: derivatives
   };
-}
+};
+
+var imageDataToCanvas = function(imagedata) {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = imagedata.width;
+    canvas.height = imagedata.height;
+    ctx.putImageData(imagedata, 0, 0);
+    return canvas;
+};
 
 var curveLengthsForAmplitude = {
 };
-
 
 var getCurveLengthsForAmplitude = function(A, v) {
   if (!(A in curveLengthsForAmplitude)) {
@@ -261,7 +268,7 @@ var getImageData = function(img) {
 };
 
 var drawCurtain = function(ctx, panel, v, f, curtainImg, lineIdx, lineImages,
-                           transform, shadingNormal) {
+                           transform, shadingNormal, padding) {
   if (curtainImg == null || lineImages[lineIdx] == null) return;
 
   var numPockets = Math.floor(v.panelWidth / v.pocketLength);
@@ -281,7 +288,8 @@ var drawCurtain = function(ctx, panel, v, f, curtainImg, lineIdx, lineImages,
   curtainCanvas.height = panel.height;
   var curtainCtx = curtainCanvas.getContext('2d');
   // Clear with white
-  curtainCtx.fillStyle = "white";
+  //curtainCtx.fillStyle = "white";
+  curtainCtx.fillStyle = "rgba(255,255,255,0)";
   curtainCtx.fillRect(0, 0, panelCurveWidth, panel.height);
   // Draw the top and bottom line, so that they can be waveified
   var t = LINE_THICKNESS[lineIdx];
@@ -294,23 +302,33 @@ var drawCurtain = function(ctx, panel, v, f, curtainImg, lineIdx, lineImages,
   ];
   drawLine(curtainCtx, lineImages[lineIdx], LINE_THICKNESS[lineIdx], clp[0], clp[1]);
   drawLine(curtainCtx, lineImages[lineIdx], LINE_THICKNESS[lineIdx], clp[3], clp[2]);
+  drawLine(curtainCtx, lineImages[lineIdx], LINE_THICKNESS[lineIdx], clp[1], clp[2]);
+  drawLine(curtainCtx, lineImages[lineIdx], LINE_THICKNESS[lineIdx], clp[3], clp[0]);
   var curtainImg = curtainCtx.getImageData(0, 0, panelCurveWidth, panel.height);
+  var bufferWidth = panel.width+2*padding;
+  var bufferHeight = panel.height+2*padding;
 
-  var imgdata = ctx.getImageData(0, 0, panel.width, panel.height);
+  var imgdata = ctx.getImageData(0, 0, bufferWidth, bufferHeight);
   var imgdatalen = imgdata.data.length;
   for(var i = 0; i < imgdatalen/4; i++){
     for (var k = 0; k < 4; k++)
-      imgdata.data[4*i + k] = 255;
+      imgdata.data[4*i + k] = 0;
 
     var pixelIdx = Math.floor(i);
-    var yIdx = Math.floor(pixelIdx / panel.width);
-    var xIdx = Math.floor(pixelIdx - yIdx*panel.width);
-    var coord = transform(xIdx, yIdx);
+    var yIdx = Math.floor(pixelIdx / bufferWidth);
+    var xIdx = Math.floor(pixelIdx - yIdx*bufferWidth);
+    var coord = transform(xIdx-padding, yIdx-padding, panel.width, panel.height);
     var curtainNormal = shadingNormal(xIdx, yIdx);
+
+    if (isNaN(coord.x) || isNaN(coord.y) ||
+        coord.x < 0 || coord.x >= curtainImg.width ||
+        coord.y < 0 || coord.y >= curtainImg.height) {
+      continue;
+    }
 
     var baseIdx = 4*(coord.x % curtainImg.width + curtainImg.width * (coord.y % curtainImg.height));
 
-    for (var k = 0; k < 3; k++) {
+    for (var k = 0; k < 4; k++) {
       var c = curtainImg.data[baseIdx+k];
       var norm = Math.sqrt(Math.pow(curtainNormal[0], 2) + Math.pow(curtainNormal[1], 2));
       curtainNormal[0] /= norm;
@@ -327,22 +345,16 @@ var drawCurtain = function(ctx, panel, v, f, curtainImg, lineIdx, lineImages,
       finalColor = Math.min(255, finalColor);
 
       // If curtain alpha is not fully opaque, then we don't want diffuse lighting
-      if (curtainImg.data[baseIdx+3] != 255)
+      if (k == 3 || curtainImg.data[baseIdx+3] != 255)
         finalColor = c;
 
       imgdata.data[4*i + k] = finalColor;
     }
 
-    imgdata.data[4*i + 3] = 255;
   }
 
-  ctx.putImageData(imgdata, panel.x, panel.y);
-
-  // Draw the side-lines of the curtain
-  drawLine(ctx, lineImages[lineIdx], LINE_THICKNESS[lineIdx],
-           [panel.x+t,panel.y+t], [panel.x+t, panel.y+panel.height-t]);
-  drawLine(ctx, lineImages[lineIdx], LINE_THICKNESS[lineIdx],
-           [panel.x+panel.width-t,panel.y+t], [panel.x+panel.width-t, panel.y+panel.height-t]);
+  var curtainCanvas = imageDataToCanvas(imgdata);
+  ctx.drawImage(curtainCanvas, panel.x-padding, panel.y-padding);
 };
 
 
@@ -418,7 +430,6 @@ Vue.component('curtain-options', {
        </canvas>\
       </div>\
     </div>\
-    <img id="curtainImg" src="right.png" style="display: none" />\
   </div>\
   ',
   data: (function(){ return {
@@ -433,7 +444,7 @@ Vue.component('curtain-options', {
     cmToPixels: 3,
     pocketLength: 8,
     ceilingHeight: 300,
-    curtainToFloor: 3,
+    curtainToFloor: 0,
     rodToCurtain: 5,
     wallToCurtain: 20,
     windowAreaWidth: 84+2*45/3,
@@ -573,11 +584,14 @@ Vue.component('curtain-options', {
       var A = Math.floor(f*5);
       var lengths = getCurveLengthsForAmplitude(A, v).lengths;
       var derivatives = getCurveLengthsForAmplitude(A, v).derivatives;
-      var transform = function(x, y) {
+      var transform = function(x, y, width, height) {
         var numWhole = Math.floor(x / lengths.length);
         var idx = x % lengths.length;
         var curveLength = lengths[idx] + numWhole*lengths[lengths.length-1];
-        return {x: Math.floor(curveLength), y: y};
+        var pocketLength = Math.floor(v.cmToPixels*2*v.pocketLength)
+        var bottomAmplitude = 4;
+        var yOffset = y/height * (bottomAmplitude * Math.sin(x * 2 * 3.14 / pocketLength) - bottomAmplitude);
+        return {x: Math.floor(curveLength), y: Math.floor(y+yOffset)};
       }
 
       var normal = function(x, y) {
@@ -585,10 +599,10 @@ Vue.component('curtain-options', {
         var deriv = derivatives[idx];
         return [deriv, -1];
       };
-      drawCurtain(ctx, p1r, v, f, v.images['curtain.png'], 1, linesImgs, 
-                  transform, normal);
-      drawCurtain(ctx, p2r, v, f, v.images['curtain.png'], 1, linesImgs, 
-                  transform, normal);
+      [p1r, p2r].forEach(function(r) {
+        drawCurtain(ctx, r, v, f, v.images['curtain.png'], 2, linesImgs, 
+                    transform, normal, 50);
+      });
     }
   }
 });
