@@ -205,16 +205,19 @@ var drawFrame = function(ctx, wr, frameImages, placeInner) {
 };
 
 var curveLengths = function(amplitude, fullLength) {
-  var ys = [];
+  var depth = [];
   for (var x = 0; x < fullLength; x++) {
-    ys.push(amplitude * Math.sin(x * 2 * 3.14 / fullLength));
+    //depth.push(amplitude * Math.sin(x * 2 * 3.14 / fullLength));
+    var xx = x % fullLength / 2;
+    var y = (x >= fullLength ? -1 : 1) * Math.sqrt(fullLength/4 - xx*xx);
+    depth.push(y);
   }
 
   var lengths = [];
   var length = 0;
-  for (var x = 1; x < ys.length; x++) {
-    var y1 = ys[x-1];
-    var y2 = ys[x];
+  for (var x = 1; x < depth.length; x++) {
+    var y1 = depth[x-1];
+    var y2 = depth[x];
     var dy = y2-y1;
     var dx = 1;
     var dist = Math.sqrt(dx*dx + dy*dy);
@@ -223,16 +226,17 @@ var curveLengths = function(amplitude, fullLength) {
   }
 
   var derivatives = [];
-  for (var x = 1; x < ys.length; x++) {
-    var y1 = ys[x-1];
-    var y2 = ys[x];
+  for (var x = 1; x < depth.length; x++) {
+    var y1 = depth[x-1];
+    var y2 = depth[x];
     var dy = y2-y1;
     derivatives.push(dy/dx);
   }
 
   return {
     lengths: lengths,
-    derivatives: derivatives
+    derivatives: derivatives,
+    depth: depth
   };
 };
 
@@ -274,7 +278,7 @@ var drawCurtain = function(ctx, panel, v, f, curtainImg, lineIdx, lineImages,
   var numPockets = Math.floor(v.panelWidth / v.pocketLength);
   var adjustedPocketLength = Math.floor(v.panelWidth / numPockets);
 
-  var A = Math.floor(f*5); // curtain depth amplitude
+  var A = Math.floor(f*10); // curtain depth amplitude
   
   var lengths = getCurveLengthsForAmplitude(A, v).lengths;
   var derivatives = getCurveLengthsForAmplitude(A, v).derivatives;
@@ -317,7 +321,9 @@ var drawCurtain = function(ctx, panel, v, f, curtainImg, lineIdx, lineImages,
     var pixelIdx = Math.floor(i);
     var yIdx = Math.floor(pixelIdx / bufferWidth);
     var xIdx = Math.floor(pixelIdx - yIdx*bufferWidth);
-    var coord = transform(xIdx-padding, yIdx-padding, panel.width, panel.height);
+    var coord = transform(xIdx-padding, yIdx-padding, panel);
+    coord.x = Math.floor(coord.x);
+    coord.y = Math.floor(coord.y);
     var curtainNormal = shadingNormal(xIdx, yIdx);
 
     if (isNaN(coord.x) || isNaN(coord.y) ||
@@ -581,17 +587,24 @@ Vue.component('curtain-options', {
         drawLine(ctx, img, thickness, line[0], line[1]);
       });
 
-      var A = Math.floor(f*5);
+      var A = Math.floor(f*10);
       var lengths = getCurveLengthsForAmplitude(A, v).lengths;
       var derivatives = getCurveLengthsForAmplitude(A, v).derivatives;
-      var transform = function(x, y, width, height) {
-        var numWhole = Math.floor(x / lengths.length);
+      var depth = getCurveLengthsForAmplitude(A, v).depth;
+      var transform = function(x, y, rect) {
         var idx = x % lengths.length;
+        var x = (x+rect.x-w/2) / (1 + -0.005*depth[idx]/A) + w/2 - rect.x;
+        x = Math.floor(x);
+        var numWhole = Math.floor(x / lengths.length);
+        idx = x % lengths.length;
+        //var idx = x % lengths.length;
         var curveLength = lengths[idx] + numWhole*lengths[lengths.length-1];
         var pocketLength = Math.floor(v.cmToPixels*2*v.pocketLength)
-        var bottomAmplitude = 4;
-        var yOffset = y/height * (bottomAmplitude * Math.sin(x * 2 * 3.14 / pocketLength) - bottomAmplitude);
-        return {x: Math.floor(curveLength), y: Math.floor(y+yOffset)};
+        //var bottomAmplitude = 6;
+        //var yOffset = y/height * (bottomAmplitude * Math.sin(x * 2 * 3.14 / pocketLength) - bottomAmplitude);
+        var perspectiveY = (rect.y+y-h/2) / (1 + -0.005*depth[idx]/A) + h/2 - rect.y;
+        //return {x: curveLength, y: y+yOffset};
+        return {x: curveLength, y: perspectiveY};
       }
 
       var normal = function(x, y) {
